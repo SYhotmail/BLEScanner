@@ -1,0 +1,82 @@
+name: BLEScanner
+options:
+  bundleIdPrefix: com.blescanner
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: "6.3"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SWIFT_STRICT_CONCURRENCY: complete
+    GENERATE_INFOPLIST_FILE: NO
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+packages:
+  BLEKit:
+    path: ../BLEKit
+targets:
+  BLEScanner:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: BLEScanner
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blescanner.app
+        PRODUCT_NAME: BLEScanner
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: BLEScanner/Info.plist
+    dependencies:
+      - package: BLEKit
+        product: BLEFeatures
+      - package: BLEKit
+        product: BLEKitDependencies
+      - package: BLEKit
+        product: BLEKitCore
+      - package: BLEKit
+        product: BLEKitHardware
+      - package: BLEKit
+        product: BLEKitTestSupport
+        # Only ever exercised behind a `-UITesting` launch-argument check in Debug builds;
+        # a production hardening pass would exclude this from Release via a config-scoped
+        # dependency list instead.
+
+  BLEScannerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: BLEScannerUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blescanner.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: BLEScanner
+
+schemes:
+  BLEScanner:
+    build:
+      targets:
+        BLEScanner: all
+        BLEScannerUITests: [test]
+    run:
+      config: Debug
+      commandLineArguments:
+        "-UITesting": false
+    test:
+      config: Debug
+      targets:
+        - BLEScannerUITests
+      commandLineArguments:
+        "-UITesting": true

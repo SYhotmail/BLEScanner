@@ -1,0 +1,127 @@
+import BLEKitCore
+import BLEKitHardware
+import BLEKitTestSupport
+import ComposableArchitecture
+import DependenciesTestSupport
+import Foundation
+import Testing
+@testable import BLEFeatures
+
+@MainActor
+@Suite("ScannerFeature", .dependencies)
+struct ScannerFeatureTests {
+    @Test("onAppear starts scanning and upserts discovered devices into history")
+    func onAppearDiscoversAndRecordsHistory() async {
+        // Non-exhaustive: `onAppear` merges several effects (history load, scan stream, start
+        // ranging check) whose resulting actions can interleave in either order, so this drains
+        // everything and asserts final state rather than an exact action sequence.
+        let fakeScanner = FakeBluetoothScannerClient()
+        let historyClient = InMemoryHistoryClient()
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = historyClient.client
+        }
+        store.exhaustivity = .off
+
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+
+        let advertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -55,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil
+        )
+        fakeScanner.send(.discovered(advertisement))
+        fakeScanner.finish()
+        await store.skipReceivedActions()
+        await store.finish()
+
+        #expect(store.state.devices[id: advertisement.identifier]?.rssi == -55)
+        #expect(store.state.devices[id: advertisement.identifier]?.name == "Living Room Sensor")
+        #expect(store.state.history.records[id: advertisement.identifier.uuidString]?.lastRSSI == -55)
+    }
+
+    @Test("filteredSortedDevices applies the shared filter criteria and sorts by RSSI")
+    func filteredSortedDevicesAppliesFilterAndSort() {
+        var state = ScannerFeature.State()
+        state.devices = [
+            DiscoveredDeviceFixtures.weakSignalDevice,
+            DiscoveredDeviceFixtures.plainSensor,
+            DiscoveredDeviceFixtures.unnamedDevice,
+        ]
+
+        #expect(state.filteredSortedDevices.map(\.id) == [
+            DiscoveredDeviceFixtures.plainSensor.id,
+            DiscoveredDeviceFixtures.unnamedDevice.id,
+            DiscoveredDeviceFixtures.weakSignalDevice.id,
+        ])
+    }
+
+    @Test("rowTapped presents the device detail screen")
+    func rowTappedPresentsDeviceDetail() async {
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.rowTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
+            $0.destination = DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)
+        }
+    }
+
+    @Test("trackBeaconTapped registers a known beacon and starts ranging when enabled")
+    func trackBeaconTappedRegistersAndStartsRanging() async {
+        let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let fakeRanging = FakeBeaconRangingClient()
+        let state = ScannerFeature.State()
+        state.$settings.withLock { $0.isEnhancedRangingEnabled = true }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.beaconRanging = fakeRanging.client
+            $0.date = .constant(fixedDate)
+        }
+
+        let beaconUUID = UUID(uuidString: "E2C56DB5-DFFB-48D2-B060-D0F5A71096E0")!
+        let beacon = BeaconReading(uuid: beaconUUID, major: 1, minor: 2, measuredPower: -59)
+
+        await store.send(.trackBeaconTapped(beacon)) {
+            $0.$knownBeacons.withLock {
+                $0.append(KnownBeacon(uuid: beaconUUID, label: "Beacon \(beaconUUID.uuidString.prefix(8))", dateAdded: fixedDate))
+            }
+        }
+        await store.receive(\.startRangingIfNeeded)
+
+        fakeRanging.finish()
+        await store.finish()
+    }
+
+    @Test("a ranged beacon result overrides the RSSI-heuristic proximity for matching devices")
+    func rangedBeaconOverridesProximity() async {
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.iBeaconDevice]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        let beaconUUID = DiscoveredDeviceFixtures.iBeaconDevice.beacon!.uuid
+        let ranged = RangedBeacon(uuid: beaconUUID, major: 1, minor: 2, proximity: .immediate, accuracyMeters: 0.2)
+
+        await store.send(.beaconRangingEvent(.rangedBeacons([ranged]))) {
+            $0.devices[id: DiscoveredDeviceFixtures.iBeaconDevice.id]?.beacon?.rangedProximity = .immediate
+        }
+    }
+}
