@@ -11,56 +11,82 @@ import SwiftUI
 /// reference app's drawer.
 struct RootView: View {
     @Bindable var store: StoreOf<AppFeature>
+    @State var width: CGFloat = 320
+
+    // Mirrors `store.isSidebarOpen` and is what actually drives the drawer's `.offset`/`.opacity`
+    // below, rather than reading `store.isSidebarOpen` directly. Wrapping `store.send` in
+    // `withAnimation` animates *opening* reliably, but TCA's `@ObservableState` publishes its
+    // change to observers slightly out-of-band from the `withAnimation` call that triggered it,
+    // so by the time SwiftUI notices `isSidebarOpen` went false, the transaction's animation is
+    // sometimes already gone and the drawer just snaps shut. Driving the drawer off plain local
+    // `@State`, mutated synchronously inside `withAnimation` at each call site, sidesteps that
+    // timing gap entirely — it's the same mechanism any other SwiftUI view uses.
+    //
+    // The drawer and scrim are also kept unconditionally in the view tree (moved off-screen via
+    // `.offset`/`.opacity` when closed, rather than an `if`-gated `.transition`), since animating
+    // a property on a view that's already present is unconditionally reliable — an
+    // insertion/removal `.transition` depends on SwiftUI diffing the `if` branch inside the exact
+    // same transaction as the state change, which is the same fragile timing dependency as above.
+    @State private var isSidebarOpen = false
 
     var body: some View {
         ZStack(alignment: .leading) {
             detailContent
-                .disabled(store.isSidebarOpen)
+                .disabled(isSidebarOpen)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.width
+                } action: { newValue in
+                    width = min(width, ceil(newValue * 0.9))
+                }
 
-            if store.isSidebarOpen {
-                Color.black
-                    .opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture { closeSidebar() }
-                    .transition(.opacity)
-                    .accessibilityIdentifier("sidebar.scrim")
+            Color.black
+                .opacity(isSidebarOpen ? 0.3 : 0)
+                .ignoresSafeArea()
+                .onTapGesture(perform: closeSidebar)
+                .allowsHitTesting(isSidebarOpen)
+                .accessibilityIdentifier("sidebar.scrim")
 
-                sidebarContent
-                    .frame(maxWidth: 320)
-                    .frame(maxHeight: .infinity)
-                    .transition(.move(edge: .leading))
-                    // Lets the drawer be dismissed the way the Android reference drawer (and every
-                    // other iOS drawer) is: a leftward drag anywhere on it, not just a tap outside.
-                    // `simultaneousGesture` (rather than `gesture`) so this never steals touches
-                    // from the List's own vertical scroll recognizer; the width-vs-height check
-                    // additionally ignores drags that are mostly vertical scrolling.
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 20)
-                            .onEnded { value in
-                                if value.translation.width < -40,
-                                   abs(value.translation.width) > abs(value.translation.height) {
-                                    closeSidebar()
-                                }
+            sidebarContent
+                .frame(maxWidth: width)
+                .frame(maxHeight: .infinity)
+                .offset(x: isSidebarOpen ? 0 : -width)
+                .allowsHitTesting(isSidebarOpen)
+                // Lets the drawer be dismissed the way the Android reference drawer (and every
+                // other iOS drawer) is: a leftward drag anywhere on it, not just a tap outside.
+                // `simultaneousGesture` (rather than `gesture`) so this never steals touches
+                // from the List's own vertical scroll recognizer; the width-vs-height check
+                // additionally ignores drags that are mostly vertical scrolling.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 20)
+                        .onEnded { value in
+                            if value.translation.width < -40,
+                               abs(value.translation.width) > abs(value.translation.height) {
+                                closeSidebar()
                             }
-                    )
-            }
+                        }
+                )
+        }
+        .onChange(of: store.isSidebarOpen) { _, newValue in
+            guard newValue != isSidebarOpen else { return }
+            openSidebarWithAnimation(newValue, sendEvent: false)
+        }
+    }
+    
+    private func openSidebarWithAnimation(_ open: Bool, sendEvent: Bool = true) {
+        withAnimation(.easeInOut(duration: open ? 0.25 : 0.5)) {
+            isSidebarOpen = open
+        }
+        if sendEvent {
+            store.send(open ? .sidebarOpened : .sidebarClosed)
         }
     }
 
-    // `.animation(_:value:) `on the ZStack didn't reliably animate the drawer's removal when
-    // `isSidebarOpen` flips via a store-driven (TCA) mutation rather than plain `@State` — the
-    // dismissal would just snap instead of sliding out. Wrapping the dispatch itself in
-    // `withAnimation` at the call site is the reliable pattern for state coming from a Store.
     private func openSidebar() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            _ = store.send(.sidebarOpened)
-        }
+        openSidebarWithAnimation(true)
     }
 
     private func closeSidebar() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            _ = store.send(.sidebarClosed)
-        }
+        openSidebarWithAnimation(false)
     }
 
     private var detailContent: some View {
@@ -97,14 +123,8 @@ struct RootView: View {
         NavigationStack {
             List(SidebarDestination.allCases) { destination in
                 Button {
-                    // Closing the drawer is handled by the reducer as part of this same action
-                    // (see `AppFeature.sidebarSelectionChanged`), so both state changes land in a
-                    // single atomic mutation instead of racing across a TCA store update and a
-                    // separate view-local one. Wrapped in `withAnimation` so the drawer's removal
-                    // (see the comment on `closeSidebar()`) actually animates.
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        _ = store.send(.sidebarSelectionChanged(destination))
-                    }
+                    openSidebarWithAnimation(false, sendEvent: false)
+                    store.send(.sidebarSelectionChanged(destination))
                 } label: {
                     Label(destination.title, systemImage: destination.systemImage)
                         .frame(maxWidth: .infinity, alignment: .leading)

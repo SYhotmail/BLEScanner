@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -46,7 +46,7 @@
 		0AFC983B184E409109BE83B0 /* BLEKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BLEKit; path = ../BLEKit; sourceTree = SOURCE_ROOT; };
 		1B3BF259399A2E38FE40273E /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		1E5E108F241D1313D363A677 /* Color+RSSI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+RSSI.swift"; sourceTree = "<group>"; };
-		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36E477E6C43FEEF96F739460 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		386412CFCAAE08DDDD867822 /* CharacteristicRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacteristicRowView.swift; sourceTree = "<group>"; };
 		3D3ADEBAA8BF212D10F5F9AF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -281,6 +281,7 @@
 			packageReferences = (
 				FDC2DE9261E07960225C080B /* XCLocalSwiftPackageReference "../BLEKit" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -388,7 +389,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 44P2L32FL4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BLEScanner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;

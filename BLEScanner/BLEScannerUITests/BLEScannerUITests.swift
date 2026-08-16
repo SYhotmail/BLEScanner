@@ -18,7 +18,7 @@ final class BLEScannerUITests: XCTestCase {
     /// The sidebar starts collapsed on both iPad- and iPhone-sized simulators; a hamburger
     /// button in the leading toolbar position (the same one on every screen) reveals it.
     private func openSidebar(_ app: XCUIApplication) {
-        guard !sidebarItem(app, "sidebar.scanner").exists else { return }
+        guard !sidebarItem(app, "sidebar.scanner").isHittable else { return }
         app.buttons["sidebar.hamburgerButton"].tap()
         // The reveal is animated; wait for the row to actually be hittable, not just present in
         // the accessibility tree, before any caller tries to tap it.
