@@ -29,8 +29,6 @@ struct RootView: View {
                 sidebarContent
                     .frame(maxWidth: 320)
                     .frame(maxHeight: .infinity)
-                    .background(.regularMaterial)
-                    .ignoresSafeArea()
                     .transition(.move(edge: .leading))
             }
         }
@@ -63,12 +61,12 @@ struct RootView: View {
         }
     }
 
+    /// Its own `NavigationStack` with a matching, un-overridden `.navigationTitle` — rather than
+    /// a manually-positioned `Text` — so "BLEScanner" renders through the same system nav-bar
+    /// chrome as "Scanner"/"Filter"/"Settings" and lines up with it exactly, at any Dynamic Type
+    /// size or display mode, instead of needing hand-tuned padding to approximate it.
     private var sidebarContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("BLEScanner")
-                .font(.title2.bold())
-                .padding()
-
+        NavigationStack {
             List(SidebarDestination.allCases) { destination in
                 Button {
                     store.send(.sidebarSelectionChanged(destination))
@@ -86,6 +84,7 @@ struct RootView: View {
                 .accessibilityIdentifier("sidebar.\(destination.rawValue)")
             }
             .listStyle(.plain)
+            .navigationTitle("BLEScanner")
         }
     }
 
