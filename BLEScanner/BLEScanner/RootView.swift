@@ -21,7 +21,7 @@ struct RootView: View {
                 Color.black
                     .opacity(0.3)
                     .ignoresSafeArea()
-                    .onTapGesture { store.send(.sidebarClosed) }
+                    .onTapGesture { closeSidebar() }
                     .transition(.opacity)
                     .accessibilityIdentifier("sidebar.scrim")
 
@@ -39,13 +39,28 @@ struct RootView: View {
                             .onEnded { value in
                                 if value.translation.width < -40,
                                    abs(value.translation.width) > abs(value.translation.height) {
-                                    store.send(.sidebarClosed)
+                                    closeSidebar()
                                 }
                             }
                     )
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: store.isSidebarOpen)
+    }
+
+    // `.animation(_:value:) `on the ZStack didn't reliably animate the drawer's removal when
+    // `isSidebarOpen` flips via a store-driven (TCA) mutation rather than plain `@State` — the
+    // dismissal would just snap instead of sliding out. Wrapping the dispatch itself in
+    // `withAnimation` at the call site is the reliable pattern for state coming from a Store.
+    private func openSidebar() {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            _ = store.send(.sidebarOpened)
+        }
+    }
+
+    private func closeSidebar() {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            _ = store.send(.sidebarClosed)
+        }
     }
 
     private var detailContent: some View {
@@ -63,7 +78,7 @@ struct RootView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        store.send(.sidebarOpened)
+                        openSidebar()
                     } label: {
                         Image(systemName: "line.3.horizontal")
                     }
@@ -85,8 +100,11 @@ struct RootView: View {
                     // Closing the drawer is handled by the reducer as part of this same action
                     // (see `AppFeature.sidebarSelectionChanged`), so both state changes land in a
                     // single atomic mutation instead of racing across a TCA store update and a
-                    // separate view-local one.
-                    store.send(.sidebarSelectionChanged(destination))
+                    // separate view-local one. Wrapped in `withAnimation` so the drawer's removal
+                    // (see the comment on `closeSidebar()`) actually animates.
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        _ = store.send(.sidebarSelectionChanged(destination))
+                    }
                 } label: {
                     Label(destination.title, systemImage: destination.systemImage)
                         .frame(maxWidth: .infinity, alignment: .leading)
