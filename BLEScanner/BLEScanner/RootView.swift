@@ -39,32 +39,36 @@ struct RootView: View {
                     width = min(width, ceil(newValue * 0.9))
                 }
 
-            Color.black
-                .opacity(isSidebarOpen ? 0.3 : 0)
-                .ignoresSafeArea()
-                .onTapGesture(perform: closeSidebar)
-                .allowsHitTesting(isSidebarOpen)
-                .accessibilityIdentifier("sidebar.scrim")
-
-            sidebarContent
-                .frame(maxWidth: width)
-                .frame(maxHeight: .infinity)
-                .offset(x: isSidebarOpen ? 0 : -width)
-                .allowsHitTesting(isSidebarOpen)
+            if true || isSidebarOpen { // TODO: fix me...
+                Color.black
+                    .opacity(isSidebarOpen ? 0.3 : 0)
+                    .transition(.opacity)
+                    .ignoresSafeArea()
+                    .onTapGesture(perform: closeSidebar)
+                    .allowsHitTesting(isSidebarOpen)
+                    .accessibilityIdentifier("sidebar.scrim")
+                
+                sidebarContent
+                    .frame(maxWidth: width)
+                    .frame(maxHeight: .infinity)
+                    .transition(.move(edge: .leading))
+                    .offset(x: isSidebarOpen ? 0 : -width)
+                    .allowsHitTesting(isSidebarOpen)
                 // Lets the drawer be dismissed the way the Android reference drawer (and every
                 // other iOS drawer) is: a leftward drag anywhere on it, not just a tap outside.
                 // `simultaneousGesture` (rather than `gesture`) so this never steals touches
                 // from the List's own vertical scroll recognizer; the width-vs-height check
                 // additionally ignores drags that are mostly vertical scrolling.
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 20)
-                        .onEnded { value in
-                            if value.translation.width < -40,
-                               abs(value.translation.width) > abs(value.translation.height) {
-                                closeSidebar()
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                if value.translation.width < -40,
+                                   abs(value.translation.width) > abs(value.translation.height) {
+                                    closeSidebar()
+                                }
                             }
-                        }
-                )
+                    )
+            }
         }
         .onChange(of: store.isSidebarOpen) { _, newValue in
             guard newValue != isSidebarOpen else { return }
@@ -73,7 +77,7 @@ struct RootView: View {
     }
     
     private func openSidebarWithAnimation(_ open: Bool, sendEvent: Bool = true) {
-        withAnimation(.easeInOut(duration: open ? 0.25 : 0.5)) {
+        withAnimation(.easeInOut(duration: open ? 0.25 : 0.25)) {
             isSidebarOpen = open
         }
         if sendEvent {
