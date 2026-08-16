@@ -15,12 +15,24 @@ final class BLEScannerUITests: XCTestCase {
         return app
     }
 
-    /// The sidebar starts collapsed behind a toolbar button even on iPad-sized simulators, so
-    /// every test that navigates via the sidebar opens it first.
+    /// The sidebar starts collapsed on both iPad- and iPhone-sized simulators, but the button
+    /// that reveals it differs: iPad exposes an identified "ToggleSidebar" toolbar button,
+    /// while compact-width iPhone instead shows a plain leading back-style button labeled with
+    /// the sidebar's navigation title ("BLEScanner").
     private func openSidebar(_ app: XCUIApplication) {
-        if !sidebarItem(app, "sidebar.scanner").exists {
+        guard !sidebarItem(app, "sidebar.scanner").exists else { return }
+        if app.buttons["ToggleSidebar"].exists {
             app.buttons["ToggleSidebar"].tap()
+        } else {
+            app.buttons["BLEScanner"].tap()
         }
+        // The reveal is animated; wait for the row to actually be hittable, not just present in
+        // the accessibility tree, before any caller tries to tap it.
+        let hittablePredicate = NSPredicate(format: "isHittable == true")
+        _ = XCTWaiter.wait(
+            for: [expectation(for: hittablePredicate, evaluatedWith: sidebarItem(app, "sidebar.scanner"))],
+            timeout: 5
+        )
     }
 
     /// The sidebar's `List(selection:)` rows aren't exposed as `.buttons` in the accessibility

@@ -3,7 +3,7 @@
 
 # Swift Package Manager
 .build/
-.swiftpm/xcode/xcuserdata/
+.swiftpm/
 
 # Xcode
 DerivedData/

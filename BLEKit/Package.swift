@@ -5,6 +5,8 @@ let package = Package(
     name: "BLEKit",
     defaultLocalization: "en",
     platforms: [
+        // SPM only supports whole major-version platform floors (no `.v18_6`); the app's real
+        // iOS 18.6 minimum is enforced via IPHONEOS_DEPLOYMENT_TARGET in the Xcode project.
         .iOS(.v18),
         .macOS(.v15),
     ],

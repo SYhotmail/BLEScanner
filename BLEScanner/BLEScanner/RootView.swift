@@ -8,22 +8,10 @@ struct RootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List {
-                ForEach(SidebarDestination.allCases) { destination in
-                    Button {
-                        store.send(.sidebarSelectionChanged(destination))
-                    } label: {
-                        Label(destination.title, systemImage: destination.systemImage)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                    .listRowBackground(
-                        store.sidebarSelection == destination
-                            ? Color.accentColor.opacity(0.12)
-                            : Color.clear
-                    )
+            List(SidebarDestination.allCases, selection: sidebarSelectionBinding) { destination in
+                Label(destination.title, systemImage: destination.systemImage)
+                    .tag(destination)
                     .accessibilityIdentifier("sidebar.\(destination.rawValue)")
-                }
             }
             .navigationTitle("BLEScanner")
         } detail: {
@@ -44,7 +32,12 @@ struct RootView: View {
         }
     }
 
-    /*private var sidebarSelectionBinding: Binding<SidebarDestination?> {
+    /// `NavigationSplitView` needs the sidebar's own `List(selection:)` binding to drive
+    /// selection — on compact width (iPhone), that binding is what makes it push from the
+    /// sidebar column to the detail column when a row is tapped. Dispatching an action from a
+    /// plain `Button` instead doesn't signal that to `NavigationSplitView`, so the split view
+    /// never advances past the sidebar list on compact devices.
+    private var sidebarSelectionBinding: Binding<SidebarDestination?> {
         Binding(
             get: { store.sidebarSelection },
             set: { newValue in
@@ -52,5 +45,5 @@ struct RootView: View {
                 store.send(.sidebarSelectionChanged(newValue))
             }
         )
-    } */
+    }
 }

@@ -9,7 +9,7 @@ The app is loosely modeled on the UX of an existing Android app ("BLE Scanner" b
 ## 2. Platform and device support
 
 - Native iOS and iPadOS app.
-- Minimum OS: iOS 18.
+- Minimum OS: iOS 18.6.
 - Supports iPhone (compact width) and iPad (regular width) with a single adaptive UI.
 - Uses CoreBluetooth for scanning, connecting, and GATT interaction.
 - Uses CoreLocation, opt-in only, for enhanced iBeacon ranging.
@@ -124,7 +124,7 @@ Platform constraints and deliberate deviations from the Android reference app:
 
 ### 14.1 Stack
 
-- SwiftUI, targeting iOS 18.
+- SwiftUI, targeting iOS 18.6.
 - Swift 6.3 language mode with full strict concurrency checking.
 - [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) for state management, composed via `@Reducer`/`@ObservableState` features.
 - `swift-dependencies` for dependency injection of hardware-backed clients.

@@ -2,7 +2,7 @@ name: BLEScanner
 options:
   bundleIdPrefix: com.blescanner
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "18.6"
   createIntermediateGroups: true
 configs:
   Debug: debug
@@ -10,7 +10,7 @@ configs:
 settings:
   base:
     SWIFT_VERSION: "6.3"
-    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.6"
     TARGETED_DEVICE_FAMILY: "1,2"
     SWIFT_STRICT_CONCURRENCY: complete
     GENERATE_INFOPLIST_FILE: NO
@@ -23,7 +23,7 @@ targets:
   BLEScanner:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "18.6"
     sources:
       - path: BLEScanner
         excludes:
@@ -54,7 +54,7 @@ targets:
   BLEScannerUITests:
     type: bundle.ui-testing
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "18.6"
     sources:
       - path: BLEScannerUITests
     settings:
