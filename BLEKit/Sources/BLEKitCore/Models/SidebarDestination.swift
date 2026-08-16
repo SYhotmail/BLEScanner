@@ -8,11 +8,7 @@ public enum SidebarDestination: String, CaseIterable, Equatable, Sendable, Codab
     public var id: String { rawValue }
 
     public var title: String {
-        switch self {
-        case .scanner: return "Scanner"
-        case .filter: return "Filter"
-        case .settings: return "Settings"
-        }
+        self.rawValue.localizedCapitalized
     }
 
     public var systemImage: String {
