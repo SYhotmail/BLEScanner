@@ -8,7 +8,7 @@ import Testing
 @MainActor
 @Suite("AppFeature", .dependencies)
 struct AppFeatureTests {
-    @Test("sidebarSelectionChanged updates the selected destination")
+    @Test("sidebarSelectionChanged updates the selected destination and closes the drawer")
     func sidebarSelectionChangedUpdatesSelection() async {
         let store = TestStore(initialState: AppFeature.State()) {
             AppFeature()
@@ -18,11 +18,37 @@ struct AppFeatureTests {
 
         #expect(store.state.sidebarSelection == .scanner)
 
+        await store.send(.sidebarOpened) {
+            $0.isSidebarOpen = true
+        }
         await store.send(.sidebarSelectionChanged(.filter)) {
             $0.sidebarSelection = .filter
+            $0.isSidebarOpen = false
+        }
+        await store.send(.sidebarOpened) {
+            $0.isSidebarOpen = true
         }
         await store.send(.sidebarSelectionChanged(.settings)) {
             $0.sidebarSelection = .settings
+            $0.isSidebarOpen = false
+        }
+    }
+
+    @Test("sidebarOpened and sidebarClosed toggle the drawer")
+    func sidebarOpenedAndClosedToggleDrawer() async {
+        let store = TestStore(initialState: AppFeature.State()) {
+            AppFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        #expect(store.state.isSidebarOpen == false)
+
+        await store.send(.sidebarOpened) {
+            $0.isSidebarOpen = true
+        }
+        await store.send(.sidebarClosed) {
+            $0.isSidebarOpen = false
         }
     }
 

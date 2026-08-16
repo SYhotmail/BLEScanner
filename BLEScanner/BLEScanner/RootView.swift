@@ -11,18 +11,17 @@ import SwiftUI
 /// reference app's drawer.
 struct RootView: View {
     @Bindable var store: StoreOf<AppFeature>
-    @State private var isSidebarOpen = false
 
     var body: some View {
         ZStack(alignment: .leading) {
             detailContent
-                .disabled(isSidebarOpen)
+                .disabled(store.isSidebarOpen)
 
-            if isSidebarOpen {
+            if store.isSidebarOpen {
                 Color.black
                     .opacity(0.3)
                     .ignoresSafeArea()
-                    .onTapGesture { closeSidebar() }
+                    .onTapGesture { store.send(.sidebarClosed) }
                     .transition(.opacity)
                     .accessibilityIdentifier("sidebar.scrim")
 
@@ -40,13 +39,13 @@ struct RootView: View {
                             .onEnded { value in
                                 if value.translation.width < -40,
                                    abs(value.translation.width) > abs(value.translation.height) {
-                                    closeSidebar()
+                                    store.send(.sidebarClosed)
                                 }
                             }
                     )
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: isSidebarOpen)
+        .animation(.easeInOut(duration: 0.25), value: store.isSidebarOpen)
     }
 
     private var detailContent: some View {
@@ -64,7 +63,7 @@ struct RootView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        isSidebarOpen = true
+                        store.send(.sidebarOpened)
                     } label: {
                         Image(systemName: "line.3.horizontal")
                     }
@@ -83,13 +82,11 @@ struct RootView: View {
         NavigationStack {
             List(SidebarDestination.allCases) { destination in
                 Button {
+                    // Closing the drawer is handled by the reducer as part of this same action
+                    // (see `AppFeature.sidebarSelectionChanged`), so both state changes land in a
+                    // single atomic mutation instead of racing across a TCA store update and a
+                    // separate view-local one.
                     store.send(.sidebarSelectionChanged(destination))
-                    // Deferred to the next run loop turn rather than called inline here: bundling
-                    // a TCA `store.send` (which invalidates observation and re-renders the scoped
-                    // child) and this plain `@State` mutation into the same synchronous closure
-                    // occasionally dropped the `@State` change on device, leaving the drawer stuck
-                    // open even though navigation had already switched underneath it.
-                    DispatchQueue.main.async { closeSidebar() }
                 } label: {
                     Label(destination.title, systemImage: destination.systemImage)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -105,9 +102,5 @@ struct RootView: View {
             .listStyle(.plain)
             .navigationTitle("BLE Scanner")
         }
-    }
-
-    private func closeSidebar() {
-        isSidebarOpen = false
     }
 }
