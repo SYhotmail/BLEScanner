@@ -30,6 +30,20 @@ struct RootView: View {
                     .frame(maxWidth: 320)
                     .frame(maxHeight: .infinity)
                     .transition(.move(edge: .leading))
+                    // Lets the drawer be dismissed the way the Android reference drawer (and every
+                    // other iOS drawer) is: a leftward drag anywhere on it, not just a tap outside.
+                    // `simultaneousGesture` (rather than `gesture`) so this never steals touches
+                    // from the List's own vertical scroll recognizer; the width-vs-height check
+                    // additionally ignores drags that are mostly vertical scrolling.
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                if value.translation.width < -40,
+                                   abs(value.translation.width) > abs(value.translation.height) {
+                                    closeSidebar()
+                                }
+                            }
+                    )
             }
         }
         .animation(.easeInOut(duration: 0.25), value: isSidebarOpen)
@@ -62,7 +76,7 @@ struct RootView: View {
     }
 
     /// Its own `NavigationStack` with a matching, un-overridden `.navigationTitle` — rather than
-    /// a manually-positioned `Text` — so "BLEScanner" renders through the same system nav-bar
+    /// a manually-positioned `Text` — so "BLE Scanner" renders through the same system nav-bar
     /// chrome as "Scanner"/"Filter"/"Settings" and lines up with it exactly, at any Dynamic Type
     /// size or display mode, instead of needing hand-tuned padding to approximate it.
     private var sidebarContent: some View {
@@ -70,7 +84,12 @@ struct RootView: View {
             List(SidebarDestination.allCases) { destination in
                 Button {
                     store.send(.sidebarSelectionChanged(destination))
-                    closeSidebar()
+                    // Deferred to the next run loop turn rather than called inline here: bundling
+                    // a TCA `store.send` (which invalidates observation and re-renders the scoped
+                    // child) and this plain `@State` mutation into the same synchronous closure
+                    // occasionally dropped the `@State` change on device, leaving the drawer stuck
+                    // open even though navigation had already switched underneath it.
+                    DispatchQueue.main.async { closeSidebar() }
                 } label: {
                     Label(destination.title, systemImage: destination.systemImage)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -84,7 +103,7 @@ struct RootView: View {
                 .accessibilityIdentifier("sidebar.\(destination.rawValue)")
             }
             .listStyle(.plain)
-            .navigationTitle("BLEScanner")
+            .navigationTitle("BLE Scanner")
         }
     }
 
