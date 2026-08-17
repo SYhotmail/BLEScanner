@@ -26,6 +26,17 @@ struct ScannerView: View {
         .navigationTitle("Scanner")
         .toolbar {
             if store.tab == .nearby {
+                if store.settings.scanMode == .manual {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            store.send(.scanToggleTapped)
+                        } label: {
+                            Image(systemName: store.isScanning ? "stop.circle" : "play.circle")
+                        }
+                        .accessibilityIdentifier(store.isScanning ? "scanner.stopScanButton" : "scanner.startScanButton")
+                        .accessibilityLabel(store.isScanning ? "Stop Scanning" : "Start Scanning")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         store.send(.displayModeToggled)

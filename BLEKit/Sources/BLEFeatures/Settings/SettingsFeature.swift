@@ -11,6 +11,7 @@ public struct SettingsFeature {
         @Shared(.appSettings) public var settings: AppSettings = .default
         @Shared(.knownBeacons) public var knownBeacons: [KnownBeacon] = []
         public var locationAuthorizationStatus: LocationAuthorizationState = .notDetermined
+        public var isScanPeriodPickerPresented = false
         @Presents public var addBeaconForm: AddKnownBeaconFeature.State?
 
         public init() {}
@@ -19,6 +20,10 @@ public struct SettingsFeature {
     public enum Action: Equatable {
         case onAppear
         case enhancedRangingToggled(Bool)
+        case scanModeChanged(ScanMode)
+        case scanPeriodChanged(TimeInterval)
+        case scanPeriodPickerTapped
+        case scanPeriodPickerDismissed
         case authorizationEvent(BeaconRangingEvent)
         case addKnownBeaconTapped
         case addBeaconForm(PresentationAction<AddKnownBeaconFeature.Action>)
@@ -50,6 +55,22 @@ public struct SettingsFeature {
                 guard isOn else { return .none }
                 let beaconRanging = beaconRanging
                 return .run { _ in beaconRanging.requestWhenInUseAuthorization() }
+
+            case let .scanModeChanged(mode):
+                state.$settings.withLock { $0.scanMode = mode }
+                return .none
+
+            case let .scanPeriodChanged(period):
+                state.$settings.withLock { $0.scanPeriod = period }
+                return .none
+
+            case .scanPeriodPickerTapped:
+                state.isScanPeriodPickerPresented = true
+                return .none
+
+            case .scanPeriodPickerDismissed:
+                state.isScanPeriodPickerPresented = false
+                return .none
 
             case let .authorizationEvent(.authorizationChanged(status)):
                 state.locationAuthorizationStatus = status

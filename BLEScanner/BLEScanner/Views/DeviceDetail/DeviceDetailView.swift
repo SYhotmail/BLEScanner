@@ -22,6 +22,23 @@ struct DeviceDetailView: View {
                 .accessibilityIdentifier("deviceDetail.connectButton")
             }
 
+            Section("Signal") {
+                HStack {
+                    Text("RSSI")
+                    Spacer()
+                    Text("\(store.device.rssi) dBm")
+                        .foregroundStyle(.secondary)
+                }
+                if let txPowerLevel = store.device.txPowerLevel {
+                    HStack {
+                        Text("Tx Power")
+                        Spacer()
+                        Text("\(txPowerLevel) dBm")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             ForEach(store.services) { service in
                 Section(service.name ?? service.identifier.rawValue) {
                     ForEach(service.characteristics) { characteristic in

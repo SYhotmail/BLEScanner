@@ -3,6 +3,7 @@ import XCTest
 /// Runs against the `-UITesting` launch configuration, which seeds fake dependencies with
 /// canned devices/history/GATT data (see `BLEScannerApp` and `UITestSupport/`) since the
 /// Simulator has no real Bluetooth radio.
+@MainActor
 final class BLEScannerUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false

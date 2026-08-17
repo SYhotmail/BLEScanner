@@ -12,6 +12,7 @@
 		085873410A387E1531DB4ADA /* Color+RSSI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E5E108F241D1313D363A677 /* Color+RSSI.swift */; };
 		270A79C1D8E4CC111B800CD6 /* AutopilotPeripheralConnectionClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7EAA734CE9F69D33CC3C86 /* AutopilotPeripheralConnectionClient.swift */; };
 		298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756C7251F42B2BD8B16E5F15 /* FilterView.swift */; };
+		315CACF862CDC542FE03EEB5 /* Test.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282FF7CDC9323A52B4D65EF5 /* Test.swift */; };
 		3266BC98FBBB254132F3B912 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E477E6C43FEEF96F739460 /* ScannerView.swift */; };
 		374134A89FD37E46D3C54C85 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1276CD743854A7864F4757 /* RootView.swift */; };
 		4E186B7B0930A82E9EE1AAA3 /* BLEKitCore in Frameworks */ = {isa = PBXBuildFile; productRef = C08A863C70595F136A380C2D /* BLEKitCore */; };
@@ -23,6 +24,7 @@
 		AE960EF4E7501C1BD832E0FE /* DeviceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */; };
 		B0E8E1DC4DE1F016048D78B9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E56DA70D4A8CC2C842FEA5 /* SettingsView.swift */; };
 		C3FFAFDDC967ED2CC1F18890 /* ScannerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D281B26BC2B8B8F94ECE5EC /* ScannerListView.swift */; };
+		D6459179001A05755A086331 /* ScanPeriodSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53610CF4C0385FA09EB801E5 /* ScanPeriodSheet.swift */; };
 		D8503D1EFB57D579F7DF1F8D /* BLEFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 479634B89B1FB7CFC3753D83 /* BLEFeatures */; };
 		E031B1752690C4DAA28CA39E /* BLEKitHardware in Frameworks */ = {isa = PBXBuildFile; productRef = D85EECCA9DA8C8EC5B85E7A3 /* BLEKitHardware */; };
 		E329D486D40F3E2BC56F65A5 /* UITestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BF7FB9299991487BF492C30 /* UITestFixtures.swift */; };
@@ -46,22 +48,12 @@
 		0AFC983B184E409109BE83B0 /* BLEKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BLEKit; path = ../BLEKit; sourceTree = SOURCE_ROOT; };
 		1B3BF259399A2E38FE40273E /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		1E5E108F241D1313D363A677 /* Color+RSSI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+RSSI.swift"; sourceTree = "<group>"; };
-		217E62C53032E64D0019C8A5 /* unnamed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = unnamed.png; sourceTree = "<group>"; };
-		217E62C63032E64D0019C8A5 /* unnamed-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-2.png"; sourceTree = "<group>"; };
-		217E62C73032E64D0019C8A5 /* unnamed-3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-3.png"; sourceTree = "<group>"; };
-		217E62C83032E64D0019C8A5 /* unnamed-4.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-4.png"; sourceTree = "<group>"; };
-		217E62C93032E64D0019C8A5 /* unnamed-5.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-5.png"; sourceTree = "<group>"; };
-		217E62CA3032E64D0019C8A5 /* unnamed-6.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-6.png"; sourceTree = "<group>"; };
-		217E62CB3032E64D0019C8A5 /* unnamed-7.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-7.png"; sourceTree = "<group>"; };
-		217E62CC3032E64D0019C8A5 /* unnamed-8.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-8.png"; sourceTree = "<group>"; };
-		217E62CD3032E64D0019C8A5 /* unnamed-9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-9.png"; sourceTree = "<group>"; };
-		217E62CE3032E64D0019C8A5 /* unnamed-10.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-10.png"; sourceTree = "<group>"; };
-		217E62CF3032E64D0019C8A5 /* unnamed-11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-11.png"; sourceTree = "<group>"; };
-		217E62D03032E64D0019C8A5 /* unnamed-12.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-12.png"; sourceTree = "<group>"; };
+		282FF7CDC9323A52B4D65EF5 /* Test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Test.swift; sourceTree = "<group>"; };
 		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36E477E6C43FEEF96F739460 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		386412CFCAAE08DDDD867822 /* CharacteristicRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacteristicRowView.swift; sourceTree = "<group>"; };
 		3D3ADEBAA8BF212D10F5F9AF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		53610CF4C0385FA09EB801E5 /* ScanPeriodSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPeriodSheet.swift; sourceTree = "<group>"; };
 		55E56DA70D4A8CC2C842FEA5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		66930F5F95C259B650586B18 /* BLEScannerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScannerUITests.swift; sourceTree = "<group>"; };
 		6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRowView.swift; sourceTree = "<group>"; };
@@ -123,26 +115,6 @@
 			path = UITestSupport;
 			sourceTree = "<group>";
 		};
-		217E62D13032E64D0019C8A5 /* android_images */ = {
-			isa = PBXGroup;
-			children = (
-				217E62C53032E64D0019C8A5 /* unnamed.png */,
-				217E62C63032E64D0019C8A5 /* unnamed-2.png */,
-				217E62C73032E64D0019C8A5 /* unnamed-3.png */,
-				217E62C83032E64D0019C8A5 /* unnamed-4.png */,
-				217E62C93032E64D0019C8A5 /* unnamed-5.png */,
-				217E62CA3032E64D0019C8A5 /* unnamed-6.png */,
-				217E62CB3032E64D0019C8A5 /* unnamed-7.png */,
-				217E62CC3032E64D0019C8A5 /* unnamed-8.png */,
-				217E62CD3032E64D0019C8A5 /* unnamed-9.png */,
-				217E62CE3032E64D0019C8A5 /* unnamed-10.png */,
-				217E62CF3032E64D0019C8A5 /* unnamed-11.png */,
-				217E62D03032E64D0019C8A5 /* unnamed-12.png */,
-			);
-			name = android_images;
-			path = ../android_images;
-			sourceTree = SOURCE_ROOT;
-		};
 		23E812966F4E19D0EE4B6281 /* Filter */ = {
 			isa = PBXGroup;
 			children = (
@@ -182,6 +154,7 @@
 				3D3ADEBAA8BF212D10F5F9AF /* Assets.xcassets */,
 				CEE021BC83F39439B1F23860 /* BLEScannerApp.swift */,
 				7B1276CD743854A7864F4757 /* RootView.swift */,
+				282FF7CDC9323A52B4D65EF5 /* Test.swift */,
 				06CD0AEDB74F808329716714 /* Extensions */,
 				20678404697B6F4BD364C4D3 /* UITestSupport */,
 				BADCFA4CA84847B1BA5117FC /* Views */,
@@ -221,7 +194,6 @@
 		BAE2F7D5844873646726AED7 = {
 			isa = PBXGroup;
 			children = (
-				217E62D13032E64D0019C8A5 /* android_images */,
 				9EDD837F103F3329A4F614E2 /* BLEScanner */,
 				A853867526AD2BB3432624AD /* BLEScannerUITests */,
 				5F0963029D729A52B7E04737 /* Packages */,
@@ -233,6 +205,7 @@
 			isa = PBXGroup;
 			children = (
 				EC28CE4A255012CFF1DBED0B /* AddKnownBeaconSheet.swift */,
+				53610CF4C0385FA09EB801E5 /* ScanPeriodSheet.swift */,
 				55E56DA70D4A8CC2C842FEA5 /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -358,10 +331,12 @@
 				298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */,
 				76043E8EE57517CA605DBB01 /* HistoryView.swift in Sources */,
 				374134A89FD37E46D3C54C85 /* RootView.swift in Sources */,
+				D6459179001A05755A086331 /* ScanPeriodSheet.swift in Sources */,
 				C3FFAFDDC967ED2CC1F18890 /* ScannerListView.swift in Sources */,
 				9E5E485165A7943EE19F4629 /* ScannerRadarView.swift in Sources */,
 				3266BC98FBBB254132F3B912 /* ScannerView.swift in Sources */,
 				B0E8E1DC4DE1F016048D78B9 /* SettingsView.swift in Sources */,
+				315CACF862CDC542FE03EEB5 /* Test.swift in Sources */,
 				E329D486D40F3E2BC56F65A5 /* UITestFixtures.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

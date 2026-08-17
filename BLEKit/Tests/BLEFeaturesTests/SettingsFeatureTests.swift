@@ -38,6 +38,48 @@ struct SettingsFeatureTests {
         }
     }
 
+    @Test("changing scan mode updates shared settings")
+    func changingScanModeUpdatesSettings() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.scanModeChanged(.manual)) {
+            $0.$settings.withLock { $0.scanMode = .manual }
+        }
+    }
+
+    @Test("changing the scan period updates shared settings")
+    func changingScanPeriodUpdatesSettings() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.scanPeriodChanged(5)) {
+            $0.$settings.withLock { $0.scanPeriod = 5 }
+        }
+    }
+
+    @Test("tapping and dismissing the scan period picker toggles its presentation")
+    func scanPeriodPickerPresentationToggles() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.scanPeriodPickerTapped) {
+            $0.isScanPeriodPickerPresented = true
+        }
+        await store.send(.scanPeriodPickerDismissed) {
+            $0.isScanPeriodPickerPresented = false
+        }
+    }
+
     @Test("onAppear surfaces authorization changes from the ranging client")
     func onAppearSurfacesAuthorizationChanges() async {
         let fakeRanging = FakeBeaconRangingClient()

@@ -10,6 +10,7 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
     public var firstSeenDate: Date
     public var isConnectable: Bool
     public var advertisedServiceIdentifiers: [GATTIdentifier]
+    public var txPowerLevel: Int?
     public var beacon: BeaconReading?
 
     public init(
@@ -20,6 +21,7 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
         firstSeenDate: Date? = nil,
         isConnectable: Bool = false,
         advertisedServiceIdentifiers: [GATTIdentifier] = [],
+        txPowerLevel: Int? = nil,
         beacon: BeaconReading? = nil
     ) {
         self.identifier = identifier
@@ -29,6 +31,7 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
         self.firstSeenDate = firstSeenDate ?? lastSeenDate
         self.isConnectable = isConnectable
         self.advertisedServiceIdentifiers = advertisedServiceIdentifiers
+        self.txPowerLevel = txPowerLevel
         self.beacon = beacon
     }
 

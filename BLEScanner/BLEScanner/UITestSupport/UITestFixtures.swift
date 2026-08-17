@@ -13,7 +13,8 @@ enum UITestFixtures {
         rssi: -55,
         isConnectable: true,
         serviceIdentifiers: [],
-        manufacturerData: nil
+        manufacturerData: nil,
+        txPowerLevel: -12
     )
 
     static let garageIdentifier = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!

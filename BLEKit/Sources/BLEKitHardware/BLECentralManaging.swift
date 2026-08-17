@@ -17,6 +17,9 @@ public struct BLEAdvertisement: Sendable, Equatable {
     public let isConnectable: Bool
     public let serviceIdentifiers: [GATTIdentifier]
     public let manufacturerData: Data?
+    /// Transmit power in dBm, from the advertisement's `CBAdvertisementDataTxPowerLevelKey`.
+    /// `nil` when the peripheral didn't include it in this advertisement.
+    public let txPowerLevel: Int?
     public let timestamp: Date
 
     public init(
@@ -26,6 +29,7 @@ public struct BLEAdvertisement: Sendable, Equatable {
         isConnectable: Bool,
         serviceIdentifiers: [GATTIdentifier],
         manufacturerData: Data?,
+        txPowerLevel: Int? = nil,
         timestamp: Date = .now
     ) {
         self.identifier = identifier
@@ -34,6 +38,7 @@ public struct BLEAdvertisement: Sendable, Equatable {
         self.isConnectable = isConnectable
         self.serviceIdentifiers = serviceIdentifiers
         self.manufacturerData = manufacturerData
+        self.txPowerLevel = txPowerLevel
         self.timestamp = timestamp
     }
 }

@@ -24,6 +24,10 @@ struct ScannerFeatureTests {
             $0.bluetoothScanner = fakeScanner.client
             $0.beaconRanging = FakeBeaconRangingClient().client
             $0.history = historyClient.client
+            // Default scan mode is `.periodic`, which spawns a periodic-restart timer effect
+            // alongside the scan stream; a `TestClock` that's never advanced keeps it suspended
+            // instead of firing, and `.onDisappear` below cancels it before `store.finish()`.
+            $0.continuousClock = TestClock()
         }
         store.exhaustivity = .off
 
@@ -41,11 +45,105 @@ struct ScannerFeatureTests {
         fakeScanner.send(.discovered(advertisement))
         fakeScanner.finish()
         await store.skipReceivedActions()
-        await store.finish()
 
         #expect(store.state.devices[id: advertisement.identifier]?.rssi == -55)
         #expect(store.state.devices[id: advertisement.identifier]?.name == "Living Room Sensor")
         #expect(store.state.history.records[id: advertisement.identifier.uuidString]?.lastRSSI == -55)
+
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
+    @Test("periodic scan mode restarts the underlying scan on each tick of the configured period")
+    func periodicScanRestartsOnEachTick() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        let clock = TestClock()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanPeriod = 2 }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off
+
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        await clock.advance(by: .seconds(2))
+        #expect(fakeScanner.stopScanningCallCount == 1)
+        #expect(fakeScanner.startScanningCallCount == 2)
+
+        await clock.advance(by: .seconds(2))
+        #expect(fakeScanner.stopScanningCallCount == 2)
+        #expect(fakeScanner.startScanningCallCount == 3)
+
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
+    @Test("onAppear does not start scanning when scan mode is manual")
+    func onAppearDoesNotScanWhenManual() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+        }
+        store.exhaustivity = .off
+
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+
+        #expect(store.state.isScanning == false)
+
+        fakeScanner.finish()
+        await store.finish()
+    }
+
+    @Test("scanToggleTapped starts and stops scanning when scan mode is manual")
+    func scanToggleTappedStartsAndStopsScanningWhenManual() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        let state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+        }
+        store.exhaustivity = .off
+
+        await store.send(.scanToggleTapped) {
+            $0.isScanning = true
+        }
+        await store.send(.scanToggleTapped) {
+            $0.isScanning = false
+        }
+
+        fakeScanner.finish()
+        await store.finish()
+    }
+
+    @Test("scanToggleTapped does nothing when scan mode is periodic")
+    func scanToggleTappedNoOpWhenPeriodic() async {
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.scanToggleTapped)
     }
 
     @Test("filteredSortedDevices applies the shared filter criteria and sorts by RSSI")

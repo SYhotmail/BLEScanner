@@ -24,7 +24,6 @@ public struct ScannerFeature {
 
         public var filteredSortedDevices: IdentifiedArrayOf<DiscoveredDevice> {
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
-            debugPrint("!!! filtered \(filtered.count)")
             return IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
         }
     }
@@ -32,6 +31,7 @@ public struct ScannerFeature {
     public enum Action: Equatable {
         case onAppear
         case onDisappear
+        case scanToggleTapped
         case tabChanged(ScanTab)
         case displayModeToggled
         case scanEvent(BLEScanEvent)
@@ -48,12 +48,14 @@ public struct ScannerFeature {
     private enum CancelID: Hashable {
         case scan
         case ranging
+        case periodicRestart
     }
 
     @Dependency(\.bluetoothScanner) var bluetoothScanner
     @Dependency(\.beaconRanging) var beaconRanging
     @Dependency(\.history) var historyClient
     @Dependency(\.date.now) var now
+    @Dependency(\.continuousClock) var clock
 
     public init() {}
 
@@ -65,28 +67,18 @@ public struct ScannerFeature {
             switch action {
             case .onAppear:
                 state.displayMode = state.settings.defaultDisplayMode
-                state.isScanning = true
-                let bluetoothScanner = bluetoothScanner
                 return .merge(
                     .send(.history(.onAppear)),
-                    .run { send in
-                        for await event in bluetoothScanner.scanEvents() {
-                            await send(.scanEvent(event))
-                        }
-                    }
-                    .cancellable(id: CancelID.scan),
-                    .run { _ in bluetoothScanner.startScanning() },
-                    .send(.startRangingIfNeeded)
+                    .send(.startRangingIfNeeded),
+                    state.settings.scanMode == .periodic ? startScanning(into: &state) : .none
                 )
 
             case .onDisappear:
-                state.isScanning = false
-                let bluetoothScanner = bluetoothScanner
-                return .merge(
-                    .run { _ in bluetoothScanner.stopScanning() },
-                    .cancel(id: CancelID.scan),
-                    .cancel(id: CancelID.ranging)
-                )
+                return .merge(stopScanning(into: &state), .cancel(id: CancelID.ranging))
+
+            case .scanToggleTapped:
+                guard state.settings.scanMode == .manual else { return .none }
+                return state.isScanning ? stopScanning(into: &state) : startScanning(into: &state)
 
             case let .tabChanged(tab):
                 state.tab = tab
@@ -164,6 +156,49 @@ public struct ScannerFeature {
         }
     }
 
+    private func startScanning(into state: inout State) -> Effect<Action> {
+        state.isScanning = true
+        let bluetoothScanner = bluetoothScanner
+        var effects: [Effect<Action>] = [
+            .run { send in
+                for await event in bluetoothScanner.scanEvents() {
+                    await send(.scanEvent(event))
+                }
+            }
+            .cancellable(id: CancelID.scan),
+            .run { _ in bluetoothScanner.startScanning() },
+        ]
+        if state.settings.scanMode == .periodic {
+            effects.append(periodicRestartEffect(period: state.settings.scanPeriod))
+        }
+        return .merge(effects)
+    }
+
+    private func stopScanning(into state: inout State) -> Effect<Action> {
+        state.isScanning = false
+        let bluetoothScanner = bluetoothScanner
+        return .merge(
+            .run { _ in bluetoothScanner.stopScanning() },
+            .cancel(id: CancelID.scan),
+            .cancel(id: CancelID.periodicRestart)
+        )
+    }
+
+    /// Some peripherals (and BLE stacks on other platforms) only report a connectable device
+    /// once per continuous scan session. Periodically stopping and restarting the underlying
+    /// CoreBluetooth scan forces a fresh advertisement (and RSSI) from those devices.
+    private func periodicRestartEffect(period: TimeInterval) -> Effect<Action> {
+        let bluetoothScanner = bluetoothScanner
+        let clock = clock
+        return .run { _ in
+            for await _ in clock.timer(interval: .seconds(period)) {
+                bluetoothScanner.stopScanning()
+                bluetoothScanner.startScanning()
+            }
+        }
+        .cancellable(id: CancelID.periodicRestart)
+    }
+
     private func upsert(advertisement: BLEAdvertisement, into state: inout State) -> Effect<Action> {
         let beacon = advertisement.manufacturerData.flatMap(AppleBeaconParser.parse(manufacturerData:))
 
@@ -174,6 +209,7 @@ public struct ScannerFeature {
             lastSeenDate: advertisement.timestamp,
             isConnectable: advertisement.isConnectable,
             advertisedServiceIdentifiers: advertisement.serviceIdentifiers,
+            txPowerLevel: advertisement.txPowerLevel,
             beacon: beacon
         )
         device.name = advertisement.name ?? device.name
@@ -181,6 +217,7 @@ public struct ScannerFeature {
         device.lastSeenDate = advertisement.timestamp
         device.isConnectable = advertisement.isConnectable
         device.advertisedServiceIdentifiers = advertisement.serviceIdentifiers
+        device.txPowerLevel = advertisement.txPowerLevel ?? device.txPowerLevel
         if let beacon {
             device.beacon = beacon
         }

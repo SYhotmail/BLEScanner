@@ -78,6 +78,7 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue ?? false
         let serviceUUIDs = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID]) ?? []
         let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
+        let txPowerLevel = (advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber)?.intValue
 
         let advertisement = BLEAdvertisement(
             identifier: peripheral.identifier,
@@ -85,7 +86,8 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
             rssi: RSSI.intValue,
             isConnectable: isConnectable,
             serviceIdentifiers: serviceUUIDs.map { GATTIdentifier(rawValue: $0.uuidString) },
-            manufacturerData: manufacturerData
+            manufacturerData: manufacturerData,
+            txPowerLevel: txPowerLevel
         )
         scanContinuation?.yield(.discovered(advertisement))
     }

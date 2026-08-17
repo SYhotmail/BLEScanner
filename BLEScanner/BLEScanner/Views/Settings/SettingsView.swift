@@ -10,6 +10,34 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
+                Picker("Scanning", selection: Binding(
+                    get: { store.settings.scanMode },
+                    set: { store.send(.scanModeChanged($0)) }
+                )) {
+                    Text("Periodic Scan").tag(ScanMode.periodic)
+                    Text("Manual Scan").tag(ScanMode.manual)
+                }
+                .accessibilityIdentifier("settings.scanMode.picker")
+
+                if store.settings.scanMode == .periodic {
+                    Button {
+                        store.send(.scanPeriodPickerTapped)
+                    } label: {
+                        HStack {
+                            Text("Scan Period")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(scanPeriodDescription)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("settings.scanPeriod.button")
+                }
+            } footer: {
+                Text("Periodic Scan starts scanning as soon as you open the Scanner screen, restarting it at the interval you choose to force a fresh reading from devices that only report once per scan. Manual Scan waits for you to start and stop scanning yourself from the Scanner screen's toolbar.")
+            }
+
+            Section {
                 Toggle("Enhanced Beacon Ranging", isOn: Binding(
                     get: { store.settings.isEnhancedRangingEnabled },
                     set: { store.send(.enhancedRangingToggled($0)) }
@@ -53,6 +81,14 @@ struct SettingsView: View {
         .sheet(item: $store.scope(state: \.addBeaconForm, action: \.addBeaconForm)) { formStore in
             AddKnownBeaconSheet(store: formStore)
         }
+        .sheet(isPresented: Binding(
+            get: { store.isScanPeriodPickerPresented },
+            set: { isPresented in
+                if !isPresented { store.send(.scanPeriodPickerDismissed) }
+            }
+        )) {
+            ScanPeriodSheet(store: store)
+        }
     }
 
     private var authorizationDescription: String {
@@ -63,5 +99,9 @@ struct SettingsView: View {
         case .authorizedWhenInUse: "When In Use"
         case .authorizedAlways: "Always"
         }
+    }
+
+    private var scanPeriodDescription: String {
+        "\(Int(store.settings.scanPeriod))s"
     }
 }
