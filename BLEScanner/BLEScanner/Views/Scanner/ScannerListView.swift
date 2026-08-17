@@ -8,13 +8,25 @@ struct ScannerListView: View {
     var body: some View {
         List {
             ForEach(store.filteredSortedDevices) { device in
-                Button {
-                    store.send(.rowTapped(device.id))
-                } label: {
-                    DeviceRowView(device: device)
+                let deviceId = device.id
+                HStack(spacing: 12) {
+                    Button {
+                        store.send(.rowTapped(deviceId))
+                    } label: {
+                        DeviceRowView(device: device)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("device.row.\(deviceId)")
+
+                    if device.isConnectable {
+                        Button("Connect") {
+                            store.send(.connectTapped(deviceId))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityIdentifier("device.row.connectButton.\(deviceId)")
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("device.row.\(device.id)")
                 .contextMenu {
                     if let beacon = device.beacon {
                         Button {

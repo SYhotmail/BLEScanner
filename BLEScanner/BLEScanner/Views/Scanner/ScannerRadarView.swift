@@ -61,7 +61,7 @@ struct ScannerRadarView: View {
                 Circle()
                     .fill(Color.rssiColor(for: device.rssi))
                     .frame(width: 14, height: 14)
-                Text(device.name ?? "Unknown")
+                Text(device.name ?? "n/a")
                     .font(.caption2)
                     .lineLimit(1)
                     .fixedSize()

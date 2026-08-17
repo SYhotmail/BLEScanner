@@ -13,13 +13,15 @@ struct DeviceRowView: View {
                 .background(Color.rssiColor(for: device.rssi), in: Circle())
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(device.name ?? "Unknown Device")
+                Text(device.name ?? "n/a")
                     .font(.headline)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Text(device.identifier.uuidString)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .truncationMode(.middle)
                 if device.beacon != nil {
                     Label("iBeacon", systemImage: "location.fill")
@@ -28,11 +30,7 @@ struct DeviceRowView: View {
                 }
             }
 
-            Spacer()
-
-            Text(device.proximity.rawValue.capitalized)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Spacer(minLength: 4)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())

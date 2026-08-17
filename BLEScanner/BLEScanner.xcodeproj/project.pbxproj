@@ -58,7 +58,7 @@
 		217E62CE3032E64D0019C8A5 /* unnamed-10.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-10.png"; sourceTree = "<group>"; };
 		217E62CF3032E64D0019C8A5 /* unnamed-11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-11.png"; sourceTree = "<group>"; };
 		217E62D03032E64D0019C8A5 /* unnamed-12.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "unnamed-12.png"; sourceTree = "<group>"; };
-		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36E477E6C43FEEF96F739460 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		386412CFCAAE08DDDD867822 /* CharacteristicRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacteristicRowView.swift; sourceTree = "<group>"; };
 		3D3ADEBAA8BF212D10F5F9AF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -421,6 +421,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 44P2L32FL4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BLEScanner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;

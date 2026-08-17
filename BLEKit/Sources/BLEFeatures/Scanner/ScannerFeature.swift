@@ -24,6 +24,7 @@ public struct ScannerFeature {
 
         public var filteredSortedDevices: IdentifiedArrayOf<DiscoveredDevice> {
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
+            debugPrint("!!! filtered \(filtered.count)")
             return IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
         }
     }
@@ -36,6 +37,7 @@ public struct ScannerFeature {
         case scanEvent(BLEScanEvent)
         case beaconRangingEvent(BeaconRangingEvent)
         case rowTapped(DiscoveredDevice.ID)
+        case connectTapped(DiscoveredDevice.ID)
         case trackBeaconTapped(BeaconReading)
         case startRangingIfNeeded
         case stopRanging
@@ -114,6 +116,13 @@ public struct ScannerFeature {
                 guard let device = state.devices[id: id] else { return .none }
                 state.destination = DeviceDetailFeature.State(device: device)
                 return .none
+
+            case let .connectTapped(id):
+                guard let device = state.devices[id: id] else { return .none }
+                state.destination = DeviceDetailFeature.State(device: device)
+                return .run { send in
+                    await send(.destination(.presented(.connectTapped)))
+                }
 
             case let .trackBeaconTapped(beacon):
                 if !state.knownBeacons.contains(where: { $0.uuid == beacon.uuid }) {

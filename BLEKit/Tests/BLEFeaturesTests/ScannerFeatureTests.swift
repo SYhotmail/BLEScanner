@@ -79,6 +79,29 @@ struct ScannerFeatureTests {
         }
     }
 
+    @Test("connectTapped presents the device detail screen and starts connecting")
+    func connectTappedPresentsDeviceDetailAndConnects() async {
+        let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+        }
+
+        await store.send(.connectTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
+            $0.destination = DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)
+        }
+        await store.receive(\.destination.presented.connectTapped) {
+            $0.destination?.connectionStatus = .connecting
+        }
+
+        fakeConnection.finish()
+        await store.finish()
+    }
+
     @Test("trackBeaconTapped registers a known beacon and starts ranging when enabled")
     func trackBeaconTappedRegistersAndStartsRanging() async {
         let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)

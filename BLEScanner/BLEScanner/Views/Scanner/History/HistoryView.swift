@@ -8,7 +8,7 @@ struct HistoryView: View {
     var body: some View {
         List(store.records) { record in
             VStack(alignment: .leading, spacing: 2) {
-                Text(record.name ?? "Unknown Device")
+                Text(record.name ?? "n/a")
                     .font(.headline)
                 Text(record.identifier)
                     .font(.caption)
