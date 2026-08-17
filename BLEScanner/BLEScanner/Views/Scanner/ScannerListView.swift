@@ -6,8 +6,9 @@ struct ScannerListView: View {
     let store: StoreOf<ScannerFeature>
 
     var body: some View {
+        let devices = store.filteredSortedDevices
         List {
-            ForEach(store.filteredSortedDevices) { device in
+            ForEach(devices) { device in
                 let deviceId = device.id
                 HStack(spacing: 12) {
                     Button {
@@ -39,8 +40,11 @@ struct ScannerListView: View {
             }
         }
         .listStyle(.plain)
+        .refreshable {
+            await store.send(.rescanTapped).finish()
+        }
         .overlay {
-            if store.filteredSortedDevices.isEmpty {
+            if devices.isEmpty {
                 ContentUnavailableView(
                     store.isScanning ? "Scanning…" : "No Devices Found",
                     systemImage: "dot.radiowaves.left.and.right"

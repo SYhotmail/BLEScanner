@@ -62,8 +62,15 @@ public enum BLEHardwareError: Error, Sendable, Equatable {
 public protocol BLECentralManaging: AnyObject, Sendable {
     func scanEvents() -> AsyncStream<BLEScanEvent>
     func startScanning()
+    func startScanning(allowDuplicates: Bool)
     func stopScanning()
     /// Vends a connection for a previously discovered (or previously known) identifier.
     /// Reuses an existing connection object if one is already active for this identifier.
     func makeConnection(for identifier: UUID) throws -> any BLEPeripheralConnection
+}
+
+public extension BLECentralManaging {
+    func startScanning() {
+        startScanning(allowDuplicates: false)
+    }
 }

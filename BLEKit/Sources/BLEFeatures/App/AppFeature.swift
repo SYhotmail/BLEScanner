@@ -59,7 +59,10 @@ public struct AppFeature {
             case .settings(.enhancedRangingToggled(false)):
                 return .send(.scanner(.stopRanging))
 
-            case .scanner, .filter, .settings:
+            case .filter:
+                return .send(.scanner(.recomputeFilteredDevices))
+
+            case .scanner, .settings:
                 return .none
             }
         }

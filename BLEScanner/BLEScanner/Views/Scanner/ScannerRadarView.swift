@@ -9,9 +9,10 @@ struct ScannerRadarView: View {
     private let rings: [Proximity] = [.immediate, .near, .far, .unknown]
 
     var body: some View {
+        let devices = store.filteredSortedDevices
+
         GeometryReader { proxy in
             let size = min(proxy.size.width, proxy.size.height) * 0.9
-            let devices = store.filteredSortedDevices
 
             ZStack {
                 ringsOverlay(size: size)
@@ -24,7 +25,7 @@ struct ScannerRadarView: View {
         }
         .padding()
         .overlay {
-            if store.filteredSortedDevices.isEmpty {
+            if devices.isEmpty {
                 ContentUnavailableView(
                     store.isScanning ? "Scanning…" : "No Devices Found",
                     systemImage: "dot.radiowaves.left.and.right"

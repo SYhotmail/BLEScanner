@@ -87,6 +87,181 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
+    @Test("a burst of advertisements is debounced into a single recompute once the stream is quiet")
+    func advertisementRecomputeIsDebounced() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        let clock = TestClock()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off
+
+        await store.send(.scanToggleTapped)
+
+        let advertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -55,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil
+        )
+        fakeScanner.send(.discovered(advertisement))
+        await store.skipReceivedActions()
+
+        // Still within the debounce window: the underlying device data updated, but the
+        // filtered/sorted snapshot the UI reads hasn't been rebuilt yet.
+        #expect(store.state.devices[id: advertisement.identifier]?.rssi == -55)
+        #expect(store.state.filteredSortedDevices.isEmpty)
+
+        await clock.advance(by: .milliseconds(300))
+        await store.skipReceivedActions()
+
+        #expect(store.state.filteredSortedDevices.map(\.id) == [advertisement.identifier])
+
+        fakeScanner.finish()
+        await store.send(.scanToggleTapped)
+        await store.finish()
+    }
+
+    @Test("periodic scan restart resets its quiet timer on every advertisement and only fires once the stream goes quiet")
+    func periodicRestartOnlyFiresAfterQuietPeriod() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        let clock = TestClock()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanPeriod = 2 }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off
+
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        let advertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -55,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil
+        )
+
+        // An advertisement arrives every 1s — less than the 2s period — so the quiet timer
+        // keeps getting cancelled and re-seeded, and the restart never actually fires.
+        for _ in 0 ..< 3 {
+            await clock.advance(by: .seconds(1))
+            fakeScanner.send(.discovered(advertisement))
+            await store.skipReceivedActions()
+        }
+        #expect(fakeScanner.stopScanningCallCount == 0)
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        // Now the stream goes quiet: once a full period passes with no further advertisements,
+        // the restart fires.
+        await clock.advance(by: .seconds(2))
+        #expect(fakeScanner.stopScanningCallCount == 1)
+        #expect(fakeScanner.startScanningCallCount == 2)
+
+        fakeScanner.finish()
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
+    @Test("rescanTapped does nothing when not currently scanning")
+    func rescanTappedNoOpWhenNotScanning() async {
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.rescanTapped)
+    }
+
+    @Test("rescanTapped immediately restarts the underlying scan while scanning")
+    func rescanTappedRestartsScanWhileScanning() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.continuousClock = TestClock()
+        }
+        store.exhaustivity = .off
+
+        await store.send(.scanToggleTapped)
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        await store.send(.rescanTapped)
+        #expect(fakeScanner.stopScanningCallCount == 1)
+        #expect(fakeScanner.startScanningCallCount == 2)
+
+        fakeScanner.finish()
+        await store.send(.scanToggleTapped)
+        await store.finish()
+    }
+
+    @Test("rescanTapped re-seeds the periodic restart quiet timer")
+    func rescanTappedResetsPeriodicRestartTimer() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        let clock = TestClock()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanPeriod = 2 }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off
+
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        // Rescan 1s into the 2s quiet period - this both restarts the scan immediately and
+        // re-seeds the periodic-restart timer.
+        await clock.advance(by: .seconds(1))
+        await store.send(.rescanTapped)
+        #expect(fakeScanner.stopScanningCallCount == 1)
+        #expect(fakeScanner.startScanningCallCount == 2)
+
+        // Without the reseed, the original timer would have fired 1s from now; since it was
+        // reseeded, it takes a further full 2s to fire.
+        await clock.advance(by: .seconds(1))
+        #expect(fakeScanner.stopScanningCallCount == 1)
+
+        await clock.advance(by: .seconds(1))
+        #expect(fakeScanner.stopScanningCallCount == 2)
+        #expect(fakeScanner.startScanningCallCount == 3)
+
+        fakeScanner.finish()
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
     @Test("onAppear does not start scanning when scan mode is manual")
     func onAppearDoesNotScanWhenManual() async {
         let fakeScanner = FakeBluetoothScannerClient()
@@ -121,6 +296,7 @@ struct ScannerFeatureTests {
         } withDependencies: {
             $0.defaultAppStorage = .inMemory
             $0.bluetoothScanner = fakeScanner.client
+            $0.continuousClock = TestClock()
         }
         store.exhaustivity = .off
 
@@ -145,6 +321,10 @@ struct ScannerFeatureTests {
 
         await store.send(.scanToggleTapped)
     }
+    
+    private static func recomputeFilteredSortedDevices(state: inout ScannerFeature.State) {
+        state.recomputeFilteredSortedDevices()
+    }
 
     @Test("filteredSortedDevices applies the shared filter criteria and sorts by RSSI")
     func filteredSortedDevicesAppliesFilterAndSort() {
@@ -154,12 +334,39 @@ struct ScannerFeatureTests {
             DiscoveredDeviceFixtures.plainSensor,
             DiscoveredDeviceFixtures.unnamedDevice,
         ]
+        Self.recomputeFilteredSortedDevices(state: &state)
 
         #expect(state.filteredSortedDevices.map(\.id) == [
             DiscoveredDeviceFixtures.plainSensor.id,
             DiscoveredDeviceFixtures.unnamedDevice.id,
             DiscoveredDeviceFixtures.weakSignalDevice.id,
         ])
+    }
+
+    @Test("changing the shared filter criteria recomputes the cached filtered/sorted devices")
+    func recomputeFilteredDevicesReflectsFilterCriteriaChange() async {
+        var state = ScannerFeature.State()
+        state.devices = [
+            DiscoveredDeviceFixtures.weakSignalDevice,
+            DiscoveredDeviceFixtures.plainSensor,
+        ]
+        Self.recomputeFilteredSortedDevices(state: &state)
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        #expect(store.state.filteredSortedDevices.count == 2)
+
+        store.state.$filterCriteria.withLock {
+            $0.isRSSIFilterEnabled = true
+            $0.minimumRSSI = -60
+        }
+
+        await store.send(.recomputeFilteredDevices) {
+            $0.filteredSortedDevices = [DiscoveredDeviceFixtures.plainSensor]
+        }
     }
 
     @Test("rowTapped presents the device detail screen")
@@ -232,6 +439,7 @@ struct ScannerFeatureTests {
     func rangedBeaconOverridesProximity() async {
         var state = ScannerFeature.State()
         state.devices = [DiscoveredDeviceFixtures.iBeaconDevice]
+        Self.recomputeFilteredSortedDevices(state: &state)
         let store = TestStore(initialState: state) {
             ScannerFeature()
         } withDependencies: {
@@ -243,6 +451,7 @@ struct ScannerFeatureTests {
 
         await store.send(.beaconRangingEvent(.rangedBeacons([ranged]))) {
             $0.devices[id: DiscoveredDeviceFixtures.iBeaconDevice.id]?.beacon?.rangedProximity = .immediate
+            $0.filteredSortedDevices[id: DiscoveredDeviceFixtures.iBeaconDevice.id]?.beacon?.rangedProximity = .immediate
         }
     }
 }

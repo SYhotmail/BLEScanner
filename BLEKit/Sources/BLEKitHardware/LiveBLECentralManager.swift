@@ -30,12 +30,12 @@ public final class LiveBLECentralManager: NSObject, BLECentralManaging, @uncheck
         }
     }
 
-    public func startScanning() {
+    public func startScanning(allowDuplicates: Bool) {
         queue.async {
             guard self.centralManager.state == .poweredOn else { return }
             self.centralManager.scanForPeripherals(
                 withServices: nil,
-                options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+                options: [CBCentralManagerScanOptionAllowDuplicatesKey: allowDuplicates]
             )
         }
     }
