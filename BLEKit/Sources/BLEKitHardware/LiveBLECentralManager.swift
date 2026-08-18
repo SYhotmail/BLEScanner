@@ -63,7 +63,18 @@ public final class LiveBLECentralManager: NSObject, BLECentralManaging, @uncheck
 
 extension LiveBLECentralManager: CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        scanContinuation?.yield(.stateChanged(BluetoothState(central.state)))
+        let state = central.state
+        let isOn = state == .poweredOn
+
+        if !isOn {
+            for connection in connections.values {
+                connection.handleDidDisconnect(error: nil)
+            }
+            connections.removeAll()
+            discoveredPeripherals.removeAll()
+        }
+
+        scanContinuation?.yield(.stateChanged(BluetoothState(state)))
     }
 
     public func centralManager(
@@ -72,7 +83,8 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
     ) {
-        discoveredPeripherals[peripheral.identifier] = peripheral
+        let identifier = peripheral.identifier
+        discoveredPeripherals[identifier] = peripheral
 
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? peripheral.name
         let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue ?? false
@@ -81,7 +93,7 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         let txPowerLevel = (advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber)?.intValue
 
         let advertisement = BLEAdvertisement(
-            identifier: peripheral.identifier,
+            identifier: identifier,
             name: name,
             rssi: RSSI.intValue,
             isConnectable: isConnectable,
@@ -91,13 +103,23 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         )
         scanContinuation?.yield(.discovered(advertisement))
     }
+    
+    private func connectionForPeripheral(_ peripheral: CBPeripheral) -> LiveBLEPeripheralConnection? {
+        connections[peripheral.identifier]
+    }
+    
+    private func removePeripheral(_ peripheral: CBPeripheral) {
+        let identifier = peripheral.identifier
+        connections.removeValue(forKey: identifier)
+        discoveredPeripherals.removeValue(forKey: identifier)
+    }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        connections[peripheral.identifier]?.handleDidConnect()
+        connectionForPeripheral(peripheral)?.handleDidConnect()
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        connections[peripheral.identifier]?.handleDidFailToConnect(error: error)
+        connectionForPeripheral(peripheral)?.handleDidFailToConnect(error: error)
     }
 
     public func centralManager(
@@ -105,7 +127,8 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        connections[peripheral.identifier]?.handleDidDisconnect(error: error)
+        connectionForPeripheral(peripheral)?.handleDidDisconnect(error: error)
+        removePeripheral(peripheral)
     }
 }
 
