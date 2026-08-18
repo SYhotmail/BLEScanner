@@ -26,6 +26,10 @@ struct ScannerListView: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                         .accessibilityIdentifier("device.row.connectButton.\(deviceId)")
+                    } else {
+                        Text("Not Connectable")
+                            .font(.caption2)
+                            .foregroundStyle(.red)
                     }
                 }
                 .contextMenu {
@@ -37,6 +41,7 @@ struct ScannerListView: View {
                         }
                     }
                 }
+                .disabled(!device.isConnectable)
             }
         }
         .listStyle(.plain)

@@ -6,6 +6,10 @@ import Foundation
 /// Canned data the app seeds itself with when launched with `-UITesting`, since XCUITest
 /// drives a separate process and can't reach into this app's fake dependency instances.
 enum UITestFixtures {
+    // Bluetooth SIG company identifier, little-endian, per `Manufacturer.companyIdentifier`.
+    static let appleManufacturerData = Data([0x4C, 0x00])
+    static let microsoftManufacturerData = Data([0x06, 0x00])
+
     static let sensorIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
     static let sensorAdvertisement = BLEAdvertisement(
         identifier: sensorIdentifier,
@@ -13,7 +17,7 @@ enum UITestFixtures {
         rssi: -55,
         isConnectable: true,
         serviceIdentifiers: [],
-        manufacturerData: nil,
+        manufacturerData: appleManufacturerData,
         txPowerLevel: -12
     )
 
@@ -24,7 +28,7 @@ enum UITestFixtures {
         rssi: -80,
         isConnectable: true,
         serviceIdentifiers: [],
-        manufacturerData: nil
+        manufacturerData: microsoftManufacturerData
     )
 
     static let batteryCharacteristic = GATTCharacteristic(

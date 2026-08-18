@@ -2,6 +2,25 @@ import BLEKitCore
 import CoreBluetooth
 import Foundation
 
+enum BLEAdvertisementDecoder {
+    /// Converts `kCBAdvDataTimestamp` / `CBAdvertisementDataTimestampKey`
+    /// into a `Date`.
+    ///
+    /// Apple reports this as CFAbsoluteTime:
+    /// seconds since 2001-01-01 00:00:00 UTC.
+    static func decodeAdvertisementTimestamp(
+        from advertisementData: [String: Any]
+    ) -> Date? {
+        guard let rawValue = advertisementData["kCBAdvDataTimestamp"] as? Double
+                ?? advertisementData["CBAdvertisementDataTimestampKey"] as? Double
+        else {
+            return nil
+        }
+        
+        return Date(timeIntervalSinceReferenceDate: rawValue)
+    }
+}
+
 /// Confines all mutable state and CoreBluetooth calls/callbacks to a single dedicated serial
 /// queue (passed as both the delegate queue and the queue every public method dispatches
 /// onto), which is what backs the `@unchecked Sendable` conformance.
@@ -85,21 +104,25 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
     ) {
         let identifier = peripheral.identifier
         discoveredPeripherals[identifier] = peripheral
-
+        
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? peripheral.name
-        let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue ?? false
+        
+        let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue == true
         let serviceUUIDs = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID]) ?? []
         let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
         let txPowerLevel = (advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber)?.intValue
+
+        let advDataTimestamp = BLEAdvertisementDecoder.decodeAdvertisementTimestamp(from: advertisementData)
 
         let advertisement = BLEAdvertisement(
             identifier: identifier,
             name: name,
             rssi: RSSI.intValue,
-            isConnectable: isConnectable,
+            isConnectable: isConnectable || peripheral.state == .connected || peripheral.state == .connecting,
             serviceIdentifiers: serviceUUIDs.map { GATTIdentifier(rawValue: $0.uuidString) },
             manufacturerData: manufacturerData,
-            txPowerLevel: txPowerLevel
+            txPowerLevel: txPowerLevel,
+            timestamp: advDataTimestamp ?? Date()
         )
         scanContinuation?.yield(.discovered(advertisement))
     }

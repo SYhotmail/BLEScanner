@@ -5,6 +5,14 @@ import Foundation
 public enum ProximityClassifier {
     public static let pathLossExponent: Double = 2.0
 
+    /// Assumed "RSSI at 1 meter" reference for devices with no calibrated Tx power of their
+    /// own (i.e. non-beacons), a widely used rule-of-thumb default for uncalibrated BLE
+    /// distance estimation. Deliberately *not* derived from `CBAdvertisementDataTxPowerLevelKey`
+    /// — that field is the radio's broadcast power setting, a different quantity from a
+    /// calibrated 1-meter reference, and substituting it here was tried and produced distance
+    /// estimates off by orders of magnitude for realistic values.
+    public static let defaultMeasuredPower: Int8 = -59
+
     /// Estimated distance in meters from a beacon's calibrated 1-meter Tx power and the
     /// currently observed RSSI. `nil` for a zero RSSI, which CoreBluetooth uses to mean
     /// "unavailable" rather than a real reading.

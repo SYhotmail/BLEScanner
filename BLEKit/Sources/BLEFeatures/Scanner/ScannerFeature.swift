@@ -264,6 +264,7 @@ public struct ScannerFeature {
 
     private func upsert(advertisement: BLEAdvertisement, into state: inout State) -> Effect<Action> {
         let beacon = advertisement.manufacturerData.flatMap(AppleBeaconParser.parse(manufacturerData:))
+        let manufacturer = advertisement.manufacturerData.flatMap(Manufacturer.parse(manufacturerData:))
 
         var device = state.devices[id: advertisement.identifier] ?? DiscoveredDevice(
             identifier: advertisement.identifier,
@@ -273,7 +274,8 @@ public struct ScannerFeature {
             isConnectable: advertisement.isConnectable,
             advertisedServiceIdentifiers: advertisement.serviceIdentifiers,
             txPowerLevel: advertisement.txPowerLevel,
-            beacon: beacon
+            beacon: beacon,
+            manufacturer: manufacturer
         )
         device.name = advertisement.name ?? device.name
         device.rssi = advertisement.rssi
@@ -283,6 +285,9 @@ public struct ScannerFeature {
         device.txPowerLevel = advertisement.txPowerLevel ?? device.txPowerLevel
         if let beacon {
             device.beacon = beacon
+        }
+        if let manufacturer {
+            device.manufacturer = manufacturer
         }
         state.devices[id: device.id] = device
 

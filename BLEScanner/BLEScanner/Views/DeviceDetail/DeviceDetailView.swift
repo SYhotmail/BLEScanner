@@ -37,6 +37,15 @@ struct DeviceDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                if let manufacturer = store.device.manufacturer {
+                    HStack {
+                        Text("Manufacturer")
+                        Spacer()
+                        ManufacturerLogoView(manufacturer: manufacturer)
+                        Text(manufacturer.displayName)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             ForEach(store.services) { service in
