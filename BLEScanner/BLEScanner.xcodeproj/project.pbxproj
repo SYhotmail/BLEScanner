@@ -21,6 +21,7 @@
 		929198F68272BB1EFAF4AA9E /* BLEKitTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 2CCAFAE4A2C2EE99C5559581 /* BLEKitTestSupport */; };
 		9E5E485165A7943EE19F4629 /* ScannerRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8637071061F81E212AA2AE41 /* ScannerRadarView.swift */; };
 		A9765748D26F08F93122DAA8 /* CharacteristicRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386412CFCAAE08DDDD867822 /* CharacteristicRowView.swift */; };
+		AE33CFBA00B65510789AA3B0 /* RawAdvertisementDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */; };
 		AE960EF4E7501C1BD832E0FE /* DeviceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */; };
 		B0E8E1DC4DE1F016048D78B9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E56DA70D4A8CC2C842FEA5 /* SettingsView.swift */; };
 		BF2C7C2557D51161D911E2FC /* ManufacturerLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E734CEF0E02EE8121070005B /* ManufacturerLogoView.swift */; };
@@ -61,6 +62,7 @@
 		6BF7FB9299991487BF492C30 /* UITestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestFixtures.swift; sourceTree = "<group>"; };
 		6D281B26BC2B8B8F94ECE5EC /* ScannerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerListView.swift; sourceTree = "<group>"; };
 		756C7251F42B2BD8B16E5F15 /* FilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterView.swift; sourceTree = "<group>"; };
+		79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawAdvertisementDataView.swift; sourceTree = "<group>"; };
 		7B1276CD743854A7864F4757 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		8637071061F81E212AA2AE41 /* ScannerRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerRadarView.swift; sourceTree = "<group>"; };
 		BB7EAA734CE9F69D33CC3C86 /* AutopilotPeripheralConnectionClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotPeripheralConnectionClient.swift; sourceTree = "<group>"; };
@@ -101,6 +103,7 @@
 			children = (
 				6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */,
 				E734CEF0E02EE8121070005B /* ManufacturerLogoView.swift */,
+				79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */,
 				6D281B26BC2B8B8F94ECE5EC /* ScannerListView.swift */,
 				8637071061F81E212AA2AE41 /* ScannerRadarView.swift */,
 				36E477E6C43FEEF96F739460 /* ScannerView.swift */,
@@ -273,6 +276,7 @@
 						TestTargetID = BB9B4B0FFE16DFB291EFDBDF;
 					};
 					BB9B4B0FFE16DFB291EFDBDF = {
+						DevelopmentTeam = 44P2L32FL4;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -335,6 +339,7 @@
 				298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */,
 				76043E8EE57517CA605DBB01 /* HistoryView.swift in Sources */,
 				BF2C7C2557D51161D911E2FC /* ManufacturerLogoView.swift in Sources */,
+				AE33CFBA00B65510789AA3B0 /* RawAdvertisementDataView.swift in Sources */,
 				374134A89FD37E46D3C54C85 /* RootView.swift in Sources */,
 				D6459179001A05755A086331 /* ScanPeriodSheet.swift in Sources */,
 				C3FFAFDDC967ED2CC1F18890 /* ScannerListView.swift in Sources */,
@@ -363,6 +368,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 44P2L32FL4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BLEScanner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;

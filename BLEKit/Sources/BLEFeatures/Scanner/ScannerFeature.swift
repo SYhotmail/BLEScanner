@@ -15,6 +15,10 @@ public struct ScannerFeature {
         public var bluetoothState: BluetoothState = .unknown
         public var history = HistoryFeature.State()
         @Presents public var destination: DeviceDetailFeature.State?
+        /// Snapshot of the device shown in the "Raw Advertisement Data" sheet, opened from a
+        /// non-connectable row's context menu. Not a `@Presents` child feature since the sheet
+        /// is a static read-only display with no reducer logic of its own.
+        public var rawAdvertisementDataDevice: DiscoveredDevice?
 
         @Shared(.filterCriteria) public var filterCriteria: FilterCriteria = .default
         @Shared(.appSettings) public var settings: AppSettings = .default
@@ -46,6 +50,8 @@ public struct ScannerFeature {
         case rowTapped(DiscoveredDevice.ID)
         case connectTapped(DiscoveredDevice.ID)
         case trackBeaconTapped(BeaconReading)
+        case rawAdvertisementDataTapped(DiscoveredDevice.ID)
+        case rawAdvertisementDataDismissed
         case startRangingIfNeeded
         case stopRanging
         case history(HistoryFeature.Action)
@@ -141,6 +147,14 @@ public struct ScannerFeature {
                     state.$knownBeacons.withLock { $0.append(KnownBeacon(uuid: beacon.uuid, label: label, dateAdded: now)) }
                 }
                 return .send(.startRangingIfNeeded)
+
+            case let .rawAdvertisementDataTapped(id):
+                state.rawAdvertisementDataDevice = state.devices[id: id]
+                return .none
+
+            case .rawAdvertisementDataDismissed:
+                state.rawAdvertisementDataDevice = nil
+                return .none
 
             case .startRangingIfNeeded:
                 guard state.settings.isEnhancedRangingEnabled, !state.knownBeacons.isEmpty else {
@@ -275,7 +289,8 @@ public struct ScannerFeature {
             advertisedServiceIdentifiers: advertisement.serviceIdentifiers,
             txPowerLevel: advertisement.txPowerLevel,
             beacon: beacon,
-            manufacturer: manufacturer
+            manufacturer: manufacturer,
+            manufacturerData: advertisement.manufacturerData
         )
         device.name = advertisement.name ?? device.name
         device.rssi = advertisement.rssi
@@ -283,6 +298,7 @@ public struct ScannerFeature {
         device.isConnectable = advertisement.isConnectable
         device.advertisedServiceIdentifiers = advertisement.serviceIdentifiers
         device.txPowerLevel = advertisement.txPowerLevel ?? device.txPowerLevel
+        device.manufacturerData = advertisement.manufacturerData ?? device.manufacturerData
         if let beacon {
             device.beacon = beacon
         }
@@ -290,6 +306,9 @@ public struct ScannerFeature {
             device.manufacturer = manufacturer
         }
         state.devices[id: device.id] = device
+        if state.rawAdvertisementDataDevice?.id == device.id {
+            state.rawAdvertisementDataDevice = device
+        }
 
         let dto = HistoryRecordDTO(
             identifier: device.identifier.uuidString,

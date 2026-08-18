@@ -13,6 +13,10 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
     public var txPowerLevel: Int?
     public var beacon: BeaconReading?
     public var manufacturer: Manufacturer?
+    /// Raw bytes of `CBAdvertisementDataManufacturerDataKey`, kept regardless of whether the
+    /// company identifier resolves to a known `Manufacturer` case — used to reconstruct a raw
+    /// advertisement view even for unrecognized manufacturers.
+    public var manufacturerData: Data?
 
     public init(
         identifier: UUID,
@@ -24,7 +28,8 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
         advertisedServiceIdentifiers: [GATTIdentifier] = [],
         txPowerLevel: Int? = nil,
         beacon: BeaconReading? = nil,
-        manufacturer: Manufacturer? = nil
+        manufacturer: Manufacturer? = nil,
+        manufacturerData: Data? = nil
     ) {
         self.identifier = identifier
         self.name = name
