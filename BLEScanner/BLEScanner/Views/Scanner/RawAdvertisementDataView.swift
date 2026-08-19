@@ -1,6 +1,5 @@
 import BLEKitCore
 import SwiftUI
-import UIKit
 
 /// Centered alert-style card reconstructing a device's advertisement as LEN/TYPE/VALUE AD
 /// structures, matching the look of the Android reference app's "Raw Data" dialog rather than
@@ -9,7 +8,7 @@ import UIKit
 struct RawAdvertisementDataView: View {
     let device: DiscoveredDevice
     let onDismiss: () -> Void
-
+    let onCopy: (DiscoveredDevice) -> Void
     @State private var didCopy = false
 
     private var structures: [AdvertisementDataStructure] {
@@ -57,7 +56,7 @@ struct RawAdvertisementDataView: View {
             Divider()
 
             Button {
-                UIPasteboard.general.string = RawAdvertisementDataBuilder.plainTextDescription(for: device)
+                onCopy(device)
                 didCopy = true
             } label: {
                 Label(didCopy ? "Copied" : "Copy", systemImage: didCopy ? "checkmark" : "doc.on.doc")

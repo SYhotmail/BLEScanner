@@ -20,6 +20,7 @@
 		821CF5ECA6C0DCB00AA9F523 /* BLEKitDependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 1F248B8EA9D980D18B82E305 /* BLEKitDependencies */; };
 		929198F68272BB1EFAF4AA9E /* BLEKitTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 2CCAFAE4A2C2EE99C5559581 /* BLEKitTestSupport */; };
 		9E5E485165A7943EE19F4629 /* ScannerRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8637071061F81E212AA2AE41 /* ScannerRadarView.swift */; };
+		A4FDA11F36C46AB3A884BDE6 /* ToastModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FBDB7875A47981181147BB /* ToastModifier.swift */; };
 		A9765748D26F08F93122DAA8 /* CharacteristicRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386412CFCAAE08DDDD867822 /* CharacteristicRowView.swift */; };
 		AE33CFBA00B65510789AA3B0 /* RawAdvertisementDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */; };
 		AE960EF4E7501C1BD832E0FE /* DeviceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */; };
@@ -69,6 +70,7 @@
 		BCB278E25EE14D2961A354ED /* DeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailView.swift; sourceTree = "<group>"; };
 		CEE021BC83F39439B1F23860 /* BLEScannerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScannerApp.swift; sourceTree = "<group>"; };
 		D01BBEFDAC712470A884C0E5 /* BLEScannerUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BLEScannerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7FBDB7875A47981181147BB /* ToastModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastModifier.swift; sourceTree = "<group>"; };
 		E734CEF0E02EE8121070005B /* ManufacturerLogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManufacturerLogoView.swift; sourceTree = "<group>"; };
 		EC28CE4A255012CFF1DBED0B /* AddKnownBeaconSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddKnownBeaconSheet.swift; sourceTree = "<group>"; };
 		F71178A0593C8AFA975086BA /* CharacteristicDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacteristicDetailView.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 		BADCFA4CA84847B1BA5117FC /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D7FBDB7875A47981181147BB /* ToastModifier.swift */,
 				A374730A3BD5A665FF5F7C38 /* DeviceDetail */,
 				23E812966F4E19D0EE4B6281 /* Filter */,
 				12528E11C9C562AE06F95FB7 /* Scanner */,
@@ -347,6 +350,7 @@
 				3266BC98FBBB254132F3B912 /* ScannerView.swift in Sources */,
 				B0E8E1DC4DE1F016048D78B9 /* SettingsView.swift in Sources */,
 				315CACF862CDC542FE03EEB5 /* Test.swift in Sources */,
+				A4FDA11F36C46AB3A884BDE6 /* ToastModifier.swift in Sources */,
 				E329D486D40F3E2BC56F65A5 /* UITestFixtures.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

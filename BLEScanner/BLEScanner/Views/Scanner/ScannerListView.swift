@@ -35,6 +35,8 @@ struct ScannerListView: View {
                         }
                     RawAdvertisementDataView(device: device) {
                         store.send(.rawAdvertisementDataDismissed)
+                    } onCopy: {
+                        store.send(.rawAdvertisementDataCopyTapped($0.id))
                     }
                     .padding(32)
                 }
@@ -42,6 +44,7 @@ struct ScannerListView: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: store.rawAdvertisementDataDevice)
+        .toast(isPresented: store.copyFeedbackDeviceID != nil, message: "Copied to Clipboard")
     }
 }
 
@@ -60,6 +63,12 @@ private struct ScannerDeviceRow: View {
 
     private var hasRawAdvertisementData: Bool {
         !device.isConnectable && !RawAdvertisementDataBuilder.structures(for: device).isEmpty
+    }
+
+    var tapGesture: some Gesture {
+        TapGesture().onEnded {
+            store.send(.rawAdvertisementDataCopyTapped(deviceId))
+        }
     }
 
     var body: some View {
@@ -81,11 +90,24 @@ private struct ScannerDeviceRow: View {
                 .controlSize(.small)
                 .accessibilityIdentifier("device.row.connectButton.\(deviceId)")
             } else {
-                Text("Not Connectable")
-                    .font(.caption2)
-                    .foregroundStyle(.red)
+                VStack(alignment: .trailing, spacing: 20) {
+                    Text("Not Connectable")
+                        .font(.caption2)
+                    
+                }.foregroundStyle(.red)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if hasRawAdvertisementData {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.caption)
+                     .padding()
+                     .padding(.bottom.union(.trailing), 10) //extra space on Non Connectable text.
+                .accessibilityLabel("Raw advertisement data available. Long press to view.")
+                .accessibilityIdentifier("device.row.rawDataIndicator.\(deviceId)")
+            }
+        }
+        .simultaneousGesture(tapGesture, isEnabled: hasRawAdvertisementData)
         .onLongPressGesture {
             handleLongPress()
         }

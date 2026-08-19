@@ -435,6 +435,42 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
+    @Test("rawAdvertisementDataCopyTapped copies the device's advertisement text and clears the toast after a delay")
+    func rawAdvertisementDataCopyTappedCopiesAndClearsFeedback() async {
+        let clock = TestClock()
+        let copiedText = LockIsolated<String?>(nil)
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.iBeaconDevice]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.continuousClock = clock
+            $0.pasteboard.setString = { copiedText.setValue($0) }
+        }
+
+        await store.send(.rawAdvertisementDataCopyTapped(DiscoveredDeviceFixtures.iBeaconDevice.id)) {
+            $0.copyFeedbackDeviceID = DiscoveredDeviceFixtures.iBeaconDevice.id
+        }
+        #expect(copiedText.value == RawAdvertisementDataBuilder.plainTextDescription(for: DiscoveredDeviceFixtures.iBeaconDevice))
+
+        await clock.advance(by: .seconds(2))
+        await store.receive(\.copyFeedbackTimedOut) {
+            $0.copyFeedbackDeviceID = nil
+        }
+    }
+
+    @Test("rawAdvertisementDataCopyTapped does nothing for an unknown device id")
+    func rawAdvertisementDataCopyTappedNoOpForUnknownDevice() async {
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.rawAdvertisementDataCopyTapped(DiscoveredDeviceFixtures.iBeaconDevice.id))
+    }
+
     @Test("a ranged beacon result overrides the RSSI-heuristic proximity for matching devices")
     func rangedBeaconOverridesProximity() async {
         var state = ScannerFeature.State()

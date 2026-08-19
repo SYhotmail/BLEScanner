@@ -19,6 +19,9 @@ public struct ScannerFeature {
         /// non-connectable row's context menu. Not a `@Presents` child feature since the sheet
         /// is a static read-only display with no reducer logic of its own.
         public var rawAdvertisementDataDevice: DiscoveredDevice?
+        /// Device whose advertisement text was most recently copied to the pasteboard, kept
+        /// around only long enough to drive a "Copied" toast; cleared by `copyFeedbackTimedOut`.
+        public var copyFeedbackDeviceID: DiscoveredDevice.ID?
 
         @Shared(.filterCriteria) public var filterCriteria: FilterCriteria = .default
         @Shared(.appSettings) public var settings: AppSettings = .default
@@ -52,6 +55,8 @@ public struct ScannerFeature {
         case trackBeaconTapped(BeaconReading)
         case rawAdvertisementDataTapped(DiscoveredDevice.ID)
         case rawAdvertisementDataDismissed
+        case rawAdvertisementDataCopyTapped(DiscoveredDevice.ID)
+        case copyFeedbackTimedOut(DiscoveredDevice.ID)
         case startRangingIfNeeded
         case stopRanging
         case history(HistoryFeature.Action)
@@ -65,7 +70,11 @@ public struct ScannerFeature {
         case ranging
         case periodicRestart
         case recomputeDebounce
+        case copyFeedback
     }
+
+    /// How long the "Copied" toast stays up before `copyFeedbackDeviceID` is cleared.
+    private static let copyFeedbackDuration: Duration = .seconds(2)
 
     /// How long the scan stream must be quiet before the filtered/sorted list is rebuilt from
     /// a burst of advertisements. Keeps rapid-fire RSSI updates for several devices from
@@ -75,6 +84,7 @@ public struct ScannerFeature {
     @Dependency(\.bluetoothScanner) var bluetoothScanner
     @Dependency(\.beaconRanging) var beaconRanging
     @Dependency(\.history) var historyClient
+    @Dependency(\.pasteboard) var pasteboard
     @Dependency(\.date.now) var now
     @Dependency(\.continuousClock) var clock
 
@@ -154,6 +164,25 @@ public struct ScannerFeature {
 
             case .rawAdvertisementDataDismissed:
                 state.rawAdvertisementDataDevice = nil
+                return .none
+
+            case let .rawAdvertisementDataCopyTapped(id):
+                guard let device = state.devices[id: id] else { return .none }
+                state.copyFeedbackDeviceID = id
+                let pasteboard = pasteboard
+                let clock = clock
+                let text = RawAdvertisementDataBuilder.plainTextDescription(for: device)
+                return .run { send in
+                    pasteboard.setString(text)
+                    try? await clock.sleep(for: Self.copyFeedbackDuration)
+                    await send(.copyFeedbackTimedOut(id))
+                }
+                .cancellable(id: CancelID.copyFeedback, cancelInFlight: true)
+
+            case let .copyFeedbackTimedOut(id):
+                if state.copyFeedbackDeviceID == id {
+                    state.copyFeedbackDeviceID = nil
+                }
                 return .none
 
             case .startRangingIfNeeded:
