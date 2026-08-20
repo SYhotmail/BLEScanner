@@ -48,11 +48,12 @@ struct ScannerListView: View {
     }
 }
 
-/// A single scanner row plus its long-press behavior. Long-pressing performs whichever of
-/// "Track This Beacon" / "Raw Advertisement Data" applies directly — no intermediate menu tap —
+/// A single scanner row plus its long-press behavior. Connectable devices toggle a favorite
+/// star on long press. Non-connectable devices instead long-press into whichever of "Track
+/// This Beacon" / "Raw Advertisement Data" applies directly — no intermediate menu tap —
 /// falling back to a picker only when both apply to the same row (e.g. a non-connectable
 /// beacon that also carries other advertisement data), and a haptic when neither does.
-private struct ScannerDeviceRow: View {
+struct ScannerDeviceRow: View {
     let store: StoreOf<ScannerFeature>
     let device: DiscoveredDevice
 
@@ -61,14 +62,12 @@ private struct ScannerDeviceRow: View {
 
     private var deviceId: DiscoveredDevice.ID { device.id }
 
-    private var hasRawAdvertisementData: Bool {
-        !device.isConnectable && !RawAdvertisementDataBuilder.structures(for: device).isEmpty
+    private var isFavorite: Bool {
+        store.favoriteDeviceIdentifiers.contains(deviceId)
     }
 
-    var tapGesture: some Gesture {
-        TapGesture().onEnded {
-            store.send(.rawAdvertisementDataCopyTapped(deviceId))
-        }
+    private var hasRawAdvertisementData: Bool {
+        !device.isConnectable && !RawAdvertisementDataBuilder.structures(for: device).isEmpty
     }
 
     var body: some View {
@@ -76,12 +75,14 @@ private struct ScannerDeviceRow: View {
             Button {
                 store.send(.rowTapped(deviceId))
             } label: {
-                DeviceRowView(device: device)
+                DeviceRowView(device: device) {
+                    store.send(.favoriteToggled(deviceId))
+                }
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("device.row.\(deviceId)")
             .disabled(!device.isConnectable)
-
+            Spacer()
             if device.isConnectable {
                 Button("Connect") {
                     store.send(.connectTapped(deviceId))
@@ -101,16 +102,30 @@ private struct ScannerDeviceRow: View {
             if hasRawAdvertisementData {
                 Image(systemName: "doc.on.clipboard")
                     .font(.caption)
-                     .padding()
-                     .padding(.bottom.union(.trailing), 10) //extra space on Non Connectable text.
+                    .padding(.bottom.union(.leading))
                 .accessibilityLabel("Raw advertisement data available. Long press to view.")
                 .accessibilityIdentifier("device.row.rawDataIndicator.\(deviceId)")
+                .onTapGesture {
+                    sendNeedCopy()
+                }
             }
         }
-        .simultaneousGesture(tapGesture, isEnabled: hasRawAdvertisementData)
-        .onLongPressGesture {
-            handleLongPress()
+        .overlay(alignment: .topLeading) {
+            if isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.caption)
+                    .foregroundStyle(.yellow)
+                    .accessibilityLabel("Favorite. Long press to remove from Favorites.")
+                    .accessibilityIdentifier("device.row.favoriteIndicator.\(deviceId)")
+            }
         }
+        
+        .simultaneousGesture(
+            LongPressGesture().onEnded { _ in
+                handleLongPress()
+            },
+            isEnabled: !device.isConnectable
+        )
         .sensoryFeedback(.warning, trigger: nothingToShowFeedbackTrigger)
         .confirmationDialog(
             "Choose an Action",
@@ -135,12 +150,19 @@ private struct ScannerDeviceRow: View {
         case let (.some(beacon), false):
             store.send(.trackBeaconTapped(beacon))
         case (.none, true):
-            store.send(.rawAdvertisementDataTapped(deviceId))
+            sendNeedCopy()
         case (.some, true):
             isActionChoicePresented = true
         case (.none, false):
-            guard !device.isConnectable else { return }
             nothingToShowFeedbackTrigger.toggle()
         }
+    }
+    
+    private func sendNeedCopy() {
+        sendNeedCopy(for: deviceId)
+    }
+    
+    private func sendNeedCopy(for deviceId: DiscoveredDevice.ID) {
+        store.send(.rawAdvertisementDataCopyTapped(deviceId))
     }
 }

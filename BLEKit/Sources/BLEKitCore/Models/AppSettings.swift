@@ -8,6 +8,7 @@ public enum ScanDisplayMode: String, CaseIterable, Equatable, Sendable, Codable 
 public enum ScanTab: String, CaseIterable, Equatable, Sendable, Codable {
     case nearby
     case history
+    case favorites
 }
 
 /// Whether scanning restarts periodically while the Scanner screen is open, or waits for the
@@ -18,7 +19,8 @@ public enum ScanMode: String, CaseIterable, Equatable, Sendable, Codable {
 }
 
 public struct AppSettings: Equatable, Sendable, Codable {
-    /// Selectable restart intervals for `.periodic` scan mode.
+    /// Selectable restart intervals for `.manual` scan mode. `.periodic` mode restarts on a
+    /// fixed, non-configurable throttle instead (see `ScannerFeature.continuousScanRestartThrottle`).
     public static let availableScanPeriods: [TimeInterval] = [1, 2, 3, 5, 10]
 
     public var isEnhancedRangingEnabled: Bool

@@ -26,6 +26,7 @@ public struct ScannerFeature {
         @Shared(.filterCriteria) public var filterCriteria: FilterCriteria = .default
         @Shared(.appSettings) public var settings: AppSettings = .default
         @Shared(.knownBeacons) public var knownBeacons: [KnownBeacon] = []
+        @Shared(.favoriteDeviceIdentifiers) public var favoriteDeviceIdentifiers: Set<UUID> = []
 
         /// Cached result of filtering/sorting `devices` by `filterCriteria`. Recomputed
         /// explicitly (via `recomputeFilteredSortedDevices()`) whenever either input changes,
@@ -34,11 +35,19 @@ public struct ScannerFeature {
         /// evaluation.
         public internal(set) var filteredSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
 
+        /// Currently-visible devices the user has starred, sorted by RSSI. Recomputed alongside
+        /// `filteredSortedDevices` — a device only appears here while it's also present in
+        /// `devices` (i.e. currently in range), the same "kept" semantics as `filteredSortedDevices`.
+        /// `favoriteDeviceIdentifiers` itself is what actually persists the starring across scans.
+        public internal(set) var favoriteSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
+
         public init() {}
 
         mutating func recomputeFilteredSortedDevices() {
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
             filteredSortedDevices = IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
+            let favorites = devices.filter { favoriteDeviceIdentifiers.contains($0.id) }
+            favoriteSortedDevices = IdentifiedArray(uniqueElements: favorites.sorted { $0.rssi > $1.rssi })
         }
     }
 
@@ -52,6 +61,7 @@ public struct ScannerFeature {
         case beaconRangingEvent(BeaconRangingEvent)
         case rowTapped(DiscoveredDevice.ID)
         case connectTapped(DiscoveredDevice.ID)
+        case favoriteToggled(DiscoveredDevice.ID)
         case trackBeaconTapped(BeaconReading)
         case rawAdvertisementDataTapped(DiscoveredDevice.ID)
         case rawAdvertisementDataDismissed
@@ -68,13 +78,17 @@ public struct ScannerFeature {
     private enum CancelID: Hashable {
         case scan
         case ranging
-        case periodicRestart
+        case restart
         case recomputeDebounce
         case copyFeedback
     }
 
     /// How long the "Copied" toast stays up before `copyFeedbackDeviceID` is cleared.
     private static let copyFeedbackDuration: Duration = .seconds(2)
+
+    /// Continuous (`.periodic`) scan mode's quiet-restart throttle — fixed, unlike Manual
+    /// mode's restart interval, which is the user-configurable `settings.scanPeriod`.
+    private static let continuousScanRestartThrottle: TimeInterval = 5
 
     /// How long the scan stream must be quiet before the filtered/sorted list is rebuilt from
     /// a burst of advertisements. Keeps rapid-fire RSSI updates for several devices from
@@ -150,6 +164,16 @@ public struct ScannerFeature {
                 return .run { send in
                     await send(.destination(.presented(.connectTapped)))
                 }
+
+            case let .favoriteToggled(id):
+                guard let device = state.devices[id: id], device.isConnectable else { return .none }
+                if state.favoriteDeviceIdentifiers.contains(id) {
+                    state.$favoriteDeviceIdentifiers.withLock { _ = $0.remove(id) }
+                } else {
+                    state.$favoriteDeviceIdentifiers.withLock { _ = $0.insert(id) }
+                }
+                Self.recomputeFilteredSortedDevices(state: &state)
+                return .none
 
             case let .trackBeaconTapped(beacon):
                 if !state.knownBeacons.contains(where: { $0.uuid == beacon.uuid }) {
@@ -229,19 +253,17 @@ public struct ScannerFeature {
     private func startScanning(into state: inout State) -> Effect<Action> {
         state.isScanning = true
         let bluetoothScanner = bluetoothScanner
-        var effects: [Effect<Action>] = [
+        let options = scanOptions(for: state)
+        return .merge(
             .run { send in
                 for await event in bluetoothScanner.scanEvents() {
                     await send(.scanEvent(event))
                 }
             }
             .cancellable(id: CancelID.scan),
-            .run { _ in bluetoothScanner.startScanning() },
-        ]
-        if state.settings.scanMode == .periodic {
-            effects.append(periodicRestartEffect(period: state.settings.scanPeriod))
-        }
-        return .merge(effects)
+            .run { _ in bluetoothScanner.startScanning(allowDuplicates: options.allowDuplicates) },
+            restartEffect(options)
+        )
     }
 
     private func stopScanning(into state: inout State) -> Effect<Action> {
@@ -250,46 +272,53 @@ public struct ScannerFeature {
         return .merge(
             .run { _ in bluetoothScanner.stopScanning() },
             .cancel(id: CancelID.scan),
-            .cancel(id: CancelID.periodicRestart),
-            //.cancel(id: CancelID.recomputeDebounce)
+            .cancel(id: CancelID.restart),
+            .cancel(id: CancelID.recomputeDebounce)
         )
+    }
+
+    /// Continuous (`.periodic`) mode scans with `allowDuplicates: true` and restarts on a fixed
+    /// `continuousScanRestartThrottle` quiet timer; Manual mode scans with
+    /// `allowDuplicates: false` and restarts on the user-configurable `settings.scanPeriod`.
+    private func scanOptions(for state: State) -> (allowDuplicates: Bool, restartInterval: TimeInterval) {
+        state.settings.scanMode == .periodic
+            ? (allowDuplicates: true, restartInterval: Self.continuousScanRestartThrottle)
+            : (allowDuplicates: false, restartInterval: state.settings.scanPeriod)
     }
 
     /// Some peripherals (and BLE stacks on other platforms) only report a connectable device
     /// once per continuous scan session. Restarting the underlying CoreBluetooth scan forces a
     /// fresh advertisement (and RSSI) from those devices — but only once the scan has actually
-    /// gone quiet for `period`, rather than on a fixed schedule regardless of activity. Every
-    /// call site (the initial seed in `startScanning`, and each advertisement in `upsert`) uses
-    /// `cancelInFlight: true`, so a live device continuously advertising keeps cancelling and
-    /// re-seeding this wait indefinitely and the restart never actually fires while it's active.
-    private func periodicRestartEffect(period: TimeInterval) -> Effect<Action> {
+    /// gone quiet for `options.restartInterval`, rather than on a fixed schedule regardless of
+    /// activity. Every call site (the initial seed in `startScanning`, and each advertisement in
+    /// `upsert`) uses `cancelInFlight: true`, so a live device continuously advertising keeps
+    /// cancelling and re-seeding this wait indefinitely and the restart never actually fires
+    /// while it's active.
+    private func restartEffect(_ options: (allowDuplicates: Bool, restartInterval: TimeInterval)) -> Effect<Action> {
         let bluetoothScanner = bluetoothScanner
         let clock = clock
         return .run { _ in
-            for await _ in clock.timer(interval: .seconds(period)) {
+            for await _ in clock.timer(interval: .seconds(options.restartInterval)) {
                 bluetoothScanner.stopScanning()
-                bluetoothScanner.startScanning()
+                bluetoothScanner.startScanning(allowDuplicates: options.allowDuplicates)
             }
         }
-        .cancellable(id: CancelID.periodicRestart, cancelInFlight: true)
+        .cancellable(id: CancelID.restart, cancelInFlight: true)
     }
 
     /// User-triggered rescan (e.g. pull-to-refresh): immediately stops and restarts the
-    /// underlying CoreBluetooth scan, the same action `periodicRestartEffect` performs on its
-    /// own once quiet. In `.periodic` mode this also re-seeds that quiet timer, since the scan
-    /// was just restarted here.
+    /// underlying CoreBluetooth scan, the same action `restartEffect` performs on its own once
+    /// quiet, and re-seeds that quiet timer since the scan was just restarted here.
     private func rescanEffect(into state: inout State) -> Effect<Action> {
         let bluetoothScanner = bluetoothScanner
-        var effects: [Effect<Action>] = [
+        let options = scanOptions(for: state)
+        return .merge(
             .run { _ in
                 bluetoothScanner.stopScanning()
-                bluetoothScanner.startScanning()
-            }
-        ]
-        if state.settings.scanMode == .periodic {
-            effects.append(periodicRestartEffect(period: state.settings.scanPeriod))
-        }
-        return .merge(effects)
+                bluetoothScanner.startScanning(allowDuplicates: options.allowDuplicates)
+            },
+            restartEffect(options)
+        )
     }
 
     /// Rebuilds the filtered/sorted list once the scan stream has been quiet for
@@ -328,6 +357,7 @@ public struct ScannerFeature {
         device.advertisedServiceIdentifiers = advertisement.serviceIdentifiers
         device.txPowerLevel = advertisement.txPowerLevel ?? device.txPowerLevel
         device.manufacturerData = advertisement.manufacturerData ?? device.manufacturerData
+        
         if let beacon {
             device.beacon = beacon
         }
@@ -349,15 +379,12 @@ public struct ScannerFeature {
         state.history.records[id: dto.id] = dto
 
         let historyClient = historyClient
-        var effects: [Effect<Action>] = [
+        return .merge(
             .send(.history(.recordUpserted(dto))),
             .run { _ in try? await historyClient.upsert(dto) },
             recomputeDebounceEffect(),
-        ]
-        if state.settings.scanMode == .periodic {
-            effects.append(periodicRestartEffect(period: state.settings.scanPeriod))
-        }
-        return .merge(effects)
+            restartEffect(scanOptions(for: state))
+        )
     }
 
     private func apply(rangedBeacons: [RangedBeacon], to state: inout State) {

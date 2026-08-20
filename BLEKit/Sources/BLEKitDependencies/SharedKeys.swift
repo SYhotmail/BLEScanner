@@ -1,4 +1,5 @@
 import BLEKitCore
+import Foundation
 import Sharing
 
 extension SharedReaderKey where Self == AppStorageKey<FilterCriteria> {
@@ -11,4 +12,8 @@ extension SharedReaderKey where Self == AppStorageKey<AppSettings> {
 
 extension SharedReaderKey where Self == AppStorageKey<[KnownBeacon]> {
     public static var knownBeacons: Self { .appStorage("knownBeacons") }
+}
+
+extension SharedReaderKey where Self == AppStorageKey<Set<UUID>> {
+    public static var favoriteDeviceIdentifiers: Self { .appStorage("favoriteDeviceIdentifiers") }
 }

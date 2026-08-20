@@ -18,6 +18,7 @@
 		4E186B7B0930A82E9EE1AAA3 /* BLEKitCore in Frameworks */ = {isa = PBXBuildFile; productRef = C08A863C70595F136A380C2D /* BLEKitCore */; };
 		76043E8EE57517CA605DBB01 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B3BF259399A2E38FE40273E /* HistoryView.swift */; };
 		821CF5ECA6C0DCB00AA9F523 /* BLEKitDependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 1F248B8EA9D980D18B82E305 /* BLEKitDependencies */; };
+		86A5E18D18EF113530DA4CBC /* FavoritesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1795C929E497F2337EE19DB2 /* FavoritesListView.swift */; };
 		929198F68272BB1EFAF4AA9E /* BLEKitTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 2CCAFAE4A2C2EE99C5559581 /* BLEKitTestSupport */; };
 		9E5E485165A7943EE19F4629 /* ScannerRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8637071061F81E212AA2AE41 /* ScannerRadarView.swift */; };
 		A4FDA11F36C46AB3A884BDE6 /* ToastModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FBDB7875A47981181147BB /* ToastModifier.swift */; };
@@ -49,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		0AFC983B184E409109BE83B0 /* BLEKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BLEKit; path = ../BLEKit; sourceTree = SOURCE_ROOT; };
+		1795C929E497F2337EE19DB2 /* FavoritesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesListView.swift; sourceTree = "<group>"; };
 		1B3BF259399A2E38FE40273E /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		1E5E108F241D1313D363A677 /* Color+RSSI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+RSSI.swift"; sourceTree = "<group>"; };
 		282FF7CDC9323A52B4D65EF5 /* Test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Test.swift; sourceTree = "<group>"; };
@@ -104,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				6AF82B31A339BDDEB50BE14B /* DeviceRowView.swift */,
+				1795C929E497F2337EE19DB2 /* FavoritesListView.swift */,
 				E734CEF0E02EE8121070005B /* ManufacturerLogoView.swift */,
 				79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */,
 				6D281B26BC2B8B8F94ECE5EC /* ScannerListView.swift */,
@@ -339,6 +342,7 @@
 				085873410A387E1531DB4ADA /* Color+RSSI.swift in Sources */,
 				EA3A79A3B0180767112D759C /* DeviceDetailView.swift in Sources */,
 				AE960EF4E7501C1BD832E0FE /* DeviceRowView.swift in Sources */,
+				86A5E18D18EF113530DA4CBC /* FavoritesListView.swift in Sources */,
 				298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */,
 				76043E8EE57517CA605DBB01 /* HistoryView.swift in Sources */,
 				BF2C7C2557D51161D911E2FC /* ManufacturerLogoView.swift in Sources */,

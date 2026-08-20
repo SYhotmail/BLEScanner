@@ -3,7 +3,8 @@ import SwiftUI
 
 struct DeviceRowView: View {
     let device: DiscoveredDevice
-
+    var onTap: () -> Void
+    
     var body: some View {
         HStack(spacing: 12) {
             VStack(spacing: 4) {
@@ -15,6 +16,7 @@ struct DeviceRowView: View {
                     .padding()
                     .background(Color.rssiColor(for: device.rssi), in: Circle())
                     .layoutPriority(1)
+                    .onTapGesture(perform: onTap)
 
                 if let manufacturer = device.manufacturer {
                     ManufacturerLogoView(manufacturer: manufacturer, maxLogoHeight: 20)
@@ -42,9 +44,6 @@ struct DeviceRowView: View {
                     }
                     
                     Text(device.lastSeenDate, style: .timer)
-                    
-                    /*LastSeenText(lastSeenDate: device.lastSeenDate)
-                        .foregroundStyle(.secondary) */
                 }
                 .font(.caption2)
                 .lineLimit(1)
@@ -59,18 +58,9 @@ struct DeviceRowView: View {
     /// Formats a rough distance estimate; `estimatedDistanceMeters` is order-of-magnitude
     /// only (see its doc comment), so this deliberately keeps precision low and marks it "~".
     private static func formattedDistance(_ meters: Double) -> String {
-        meters < 100 ? String(format: "~%.1f m", meters) : String(format: "~%.0f m", meters)
-    }
-}
-
-/// Live-updating "Xs ago" label, driven by the advertisement's `advDataTimestamp`-derived
-/// `lastSeenDate` rather than the queue-processing time of the discovery callback.
-private struct LastSeenText: View {
-    let lastSeenDate: Date
-
-    var body: some View {
-        TimelineView(.periodic(from: lastSeenDate, by: 1)) { context in
-            Text("\(max(0, Int(context.date.timeIntervalSince(lastSeenDate))))s ago")
+        guard meters >= 1 else {
+            return String(format: "~%.2f m", meters)
         }
+        return meters < 100 ? String(format: "~%.1f m", meters) : String(format: "~%.0f m", meters)
     }
 }

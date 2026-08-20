@@ -19,7 +19,7 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.scanMode.picker")
 
-                if store.settings.scanMode == .periodic {
+                if store.settings.scanMode == .manual {
                     Button {
                         store.send(.scanPeriodPickerTapped)
                     } label: {
@@ -34,7 +34,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.scanPeriod.button")
                 }
             } footer: {
-                Text("Periodic Scan starts scanning as soon as you open the Scanner screen, restarting it at the interval you choose to force a fresh reading from devices that only report once per scan. Manual Scan waits for you to start and stop scanning yourself from the Scanner screen's toolbar.")
+                Text("Periodic Scan starts scanning as soon as you open the Scanner screen, automatically restarting it every 5 seconds to force a fresh reading from devices that only report once per scan. Manual Scan waits for you to start and stop scanning yourself from the Scanner screen's toolbar, restarting at the interval you choose below while it's running.")
             }
 
             Section {

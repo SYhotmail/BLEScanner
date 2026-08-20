@@ -24,7 +24,7 @@ struct ScannerFeatureTests {
             $0.bluetoothScanner = fakeScanner.client
             $0.beaconRanging = FakeBeaconRangingClient().client
             $0.history = historyClient.client
-            // Default scan mode is `.periodic`, which spawns a periodic-restart timer effect
+            // Default scan mode is `.periodic`, which spawns a restart-quiet-timer effect
             // alongside the scan stream; a `TestClock` that's never advanced keeps it suspended
             // instead of firing, and `.onDisappear` below cancels it before `store.finish()`.
             $0.continuousClock = TestClock()
@@ -54,11 +54,13 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
-    @Test("periodic scan mode restarts the underlying scan on each tick of the configured period")
-    func periodicScanRestartsOnEachTick() async {
+    @Test("continuous (periodic) scan mode restarts on a fixed 5s throttle, scanning with allowDuplicates: true, ignoring the scanPeriod setting")
+    func continuousScanRestartsOnFixedThrottle() async {
         let fakeScanner = FakeBluetoothScannerClient()
         let clock = TestClock()
         var state = ScannerFeature.State()
+        // Distractor: continuous mode's restart throttle is fixed, not sourced from settings —
+        // only `.manual` mode's restart interval uses `scanPeriod`.
         state.$settings.withLock { $0.scanPeriod = 2 }
         let store = TestStore(initialState: state) {
             ScannerFeature()
@@ -74,12 +76,20 @@ struct ScannerFeatureTests {
         await store.send(.onAppear)
         await store.skipReceivedActions()
         #expect(fakeScanner.startScanningCallCount == 1)
+        #expect(fakeScanner.lastAllowDuplicates == true)
 
+        // The distractor scanPeriod (2s) has no effect: nothing fires at 2s.
         await clock.advance(by: .seconds(2))
+        #expect(fakeScanner.stopScanningCallCount == 0)
+        #expect(fakeScanner.startScanningCallCount == 1)
+
+        // The fixed 5s throttle fires 3s later (5s total).
+        await clock.advance(by: .seconds(3))
         #expect(fakeScanner.stopScanningCallCount == 1)
         #expect(fakeScanner.startScanningCallCount == 2)
+        #expect(fakeScanner.lastAllowDuplicates == true)
 
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(5))
         #expect(fakeScanner.stopScanningCallCount == 2)
         #expect(fakeScanner.startScanningCallCount == 3)
 
@@ -132,12 +142,15 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
-    @Test("periodic scan restart resets its quiet timer on every advertisement and only fires once the stream goes quiet")
-    func periodicRestartOnlyFiresAfterQuietPeriod() async {
+    @Test("manual scan mode restarts on a quiet timer sourced from settings.scanPeriod, scanning with allowDuplicates: false")
+    func manualScanRestartUsesConfiguredScanPeriod() async {
         let fakeScanner = FakeBluetoothScannerClient()
         let clock = TestClock()
         var state = ScannerFeature.State()
-        state.$settings.withLock { $0.scanPeriod = 2 }
+        state.$settings.withLock {
+            $0.scanMode = .manual
+            $0.scanPeriod = 2
+        }
         let store = TestStore(initialState: state) {
             ScannerFeature()
         } withDependencies: {
@@ -149,9 +162,9 @@ struct ScannerFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.onAppear)
-        await store.skipReceivedActions()
+        await store.send(.scanToggleTapped)
         #expect(fakeScanner.startScanningCallCount == 1)
+        #expect(fakeScanner.lastAllowDuplicates == false)
 
         let advertisement = BLEAdvertisement(
             identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
@@ -177,9 +190,10 @@ struct ScannerFeatureTests {
         await clock.advance(by: .seconds(2))
         #expect(fakeScanner.stopScanningCallCount == 1)
         #expect(fakeScanner.startScanningCallCount == 2)
+        #expect(fakeScanner.lastAllowDuplicates == false)
 
         fakeScanner.finish()
-        await store.send(.onDisappear)
+        await store.send(.scanToggleTapped)
         await store.finish()
     }
 
@@ -210,21 +224,24 @@ struct ScannerFeatureTests {
 
         await store.send(.scanToggleTapped)
         #expect(fakeScanner.startScanningCallCount == 1)
+        #expect(fakeScanner.lastAllowDuplicates == false)
 
         await store.send(.rescanTapped)
         #expect(fakeScanner.stopScanningCallCount == 1)
         #expect(fakeScanner.startScanningCallCount == 2)
+        #expect(fakeScanner.lastAllowDuplicates == false)
 
         fakeScanner.finish()
         await store.send(.scanToggleTapped)
         await store.finish()
     }
 
-    @Test("rescanTapped re-seeds the periodic restart quiet timer")
-    func rescanTappedResetsPeriodicRestartTimer() async {
+    @Test("rescanTapped re-seeds continuous scan mode's fixed restart quiet timer")
+    func rescanTappedResetsContinuousRestartTimer() async {
         let fakeScanner = FakeBluetoothScannerClient()
         let clock = TestClock()
         var state = ScannerFeature.State()
+        // Distractor: continuous mode ignores scanPeriod for its restart interval.
         state.$settings.withLock { $0.scanPeriod = 2 }
         let store = TestStore(initialState: state) {
             ScannerFeature()
@@ -241,19 +258,19 @@ struct ScannerFeatureTests {
         await store.skipReceivedActions()
         #expect(fakeScanner.startScanningCallCount == 1)
 
-        // Rescan 1s into the 2s quiet period - this both restarts the scan immediately and
-        // re-seeds the periodic-restart timer.
-        await clock.advance(by: .seconds(1))
+        // Rescan 2s into the fixed 5s quiet period - this both restarts the scan immediately
+        // and re-seeds the restart timer.
+        await clock.advance(by: .seconds(2))
         await store.send(.rescanTapped)
         #expect(fakeScanner.stopScanningCallCount == 1)
         #expect(fakeScanner.startScanningCallCount == 2)
 
-        // Without the reseed, the original timer would have fired 1s from now; since it was
-        // reseeded, it takes a further full 2s to fire.
-        await clock.advance(by: .seconds(1))
+        // Without the reseed, the original timer would have fired 3s from now; since it was
+        // reseeded, it takes a further full 5s to fire.
+        await clock.advance(by: .seconds(3))
         #expect(fakeScanner.stopScanningCallCount == 1)
 
-        await clock.advance(by: .seconds(1))
+        await clock.advance(by: .seconds(2))
         #expect(fakeScanner.stopScanningCallCount == 2)
         #expect(fakeScanner.startScanningCallCount == 3)
 
@@ -469,6 +486,55 @@ struct ScannerFeatureTests {
         }
 
         await store.send(.rawAdvertisementDataCopyTapped(DiscoveredDeviceFixtures.iBeaconDevice.id))
+    }
+
+    @Test("favoriteToggled stars a connectable device and adds it to favoriteSortedDevices")
+    func favoriteToggledStarsConnectableDevice() async {
+        var device = DiscoveredDeviceFixtures.plainSensor
+        device.isConnectable = true
+        var state = ScannerFeature.State()
+        state.devices = [device]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.favoriteToggled(device.id)) {
+            $0.$favoriteDeviceIdentifiers.withLock { _ = $0.insert(device.id) }
+            $0.filteredSortedDevices = [device]
+            $0.favoriteSortedDevices = [device]
+        }
+
+        // Toggling again un-stars it.
+        await store.send(.favoriteToggled(device.id)) {
+            $0.$favoriteDeviceIdentifiers.withLock { _ = $0.remove(device.id) }
+            $0.favoriteSortedDevices = []
+        }
+    }
+
+    @Test("favoriteToggled does nothing for a non-connectable device")
+    func favoriteToggledNoOpForNonConnectableDevice() async {
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor] // not connectable
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.favoriteToggled(DiscoveredDeviceFixtures.plainSensor.id))
+    }
+
+    @Test("favoriteToggled does nothing for an unknown device id")
+    func favoriteToggledNoOpForUnknownDevice() async {
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.favoriteToggled(DiscoveredDeviceFixtures.plainSensor.id))
     }
 
     @Test("a ranged beacon result overrides the RSSI-heuristic proximity for matching devices")

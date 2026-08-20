@@ -11,6 +11,7 @@ struct ScannerView: View {
             Picker("Tab", selection: tabBinding) {
                 Text("Near By").tag(ScanTab.nearby)
                 Text("History").tag(ScanTab.history)
+                Text("Favorites").tag(ScanTab.favorites)
             }
             .pickerStyle(.segmented)
             .padding()
@@ -21,6 +22,8 @@ struct ScannerView: View {
                 nearByContent
             case .history:
                 HistoryView(store: store.scope(state: \.history, action: \.history))
+            case .favorites:
+                FavoritesListView(store: store)
             }
         }
         .navigationTitle("Scanner")

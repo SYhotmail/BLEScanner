@@ -7,6 +7,7 @@ public final class FakeBluetoothScannerClient: @unchecked Sendable {
     private let lock = NSLock()
     private var _startScanningCallCount = 0
     private var _stopScanningCallCount = 0
+    private var _lastAllowDuplicates: Bool?
     public var connectionProvider: @Sendable (UUID) throws -> PeripheralConnectionClient
 
     public init(
@@ -37,12 +38,21 @@ public final class FakeBluetoothScannerClient: @unchecked Sendable {
         return _stopScanningCallCount
     }
 
+    /// `allowDuplicates` passed to the most recent `startScanning` call, or `nil` if it hasn't
+    /// been called yet.
+    public var lastAllowDuplicates: Bool? {
+        lock.lock()
+        defer { lock.unlock() }
+        return _lastAllowDuplicates
+    }
+
     public var client: BluetoothScannerClient {
         BluetoothScannerClient(
             scanEvents: { [channel] in channel.stream() },
-            startScanning: { [self] in
+            startScanning: { [self] allowDuplicates in
                 lock.lock()
                 _startScanningCallCount += 1
+                _lastAllowDuplicates = allowDuplicates
                 lock.unlock()
             },
             stopScanning: { [self] in

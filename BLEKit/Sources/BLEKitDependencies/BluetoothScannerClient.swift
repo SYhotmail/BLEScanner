@@ -6,7 +6,7 @@ import Foundation
 @DependencyClient
 public struct BluetoothScannerClient: Sendable {
     public var scanEvents: @Sendable () -> AsyncStream<BLEScanEvent> = { AsyncStream { $0.finish() } }
-    public var startScanning: @Sendable () -> Void
+    public var startScanning: @Sendable (_ allowDuplicates: Bool) -> Void
     public var stopScanning: @Sendable () -> Void
     public var makeConnection: @Sendable (_ identifier: UUID) throws -> PeripheralConnectionClient
 }
@@ -16,7 +16,7 @@ extension BluetoothScannerClient: DependencyKey {
         let manager = LiveBLECentralManager()
         return BluetoothScannerClient(
             scanEvents: { manager.scanEvents() },
-            startScanning: { manager.startScanning() },
+            startScanning: { manager.startScanning(allowDuplicates: $0) },
             stopScanning: { manager.stopScanning() },
             makeConnection: { identifier in
                 .live(try manager.makeConnection(for: identifier))
