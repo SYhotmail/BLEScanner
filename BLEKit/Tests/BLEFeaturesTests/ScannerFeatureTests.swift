@@ -279,8 +279,8 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
-    @Test("onAppear does not start scanning when scan mode is manual")
-    func onAppearDoesNotScanWhenManual() async {
+    @Test("onAppear auto-starts scanning once on launch when scan mode is manual")
+    func onAppearAutoStartsScanningOnceWhenManual() async {
         let fakeScanner = FakeBluetoothScannerClient()
         var state = ScannerFeature.State()
         state.$settings.withLock { $0.scanMode = .manual }
@@ -291,15 +291,50 @@ struct ScannerFeatureTests {
             $0.bluetoothScanner = fakeScanner.client
             $0.beaconRanging = FakeBeaconRangingClient().client
             $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = TestClock()
         }
         store.exhaustivity = .off
 
         await store.send(.onAppear)
         await store.skipReceivedActions()
 
+        #expect(store.state.isScanning == true)
+        #expect(store.state.hasAutoStartedInitialManualScan == true)
+
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
+    @Test("a later onAppear does not restart manual scanning the user already stopped")
+    func laterOnAppearDoesNotRestartManualScanningUserStopped() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+        var state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = TestClock()
+        }
+        store.exhaustivity = .off
+
+        // Initial launch auto-starts the scan; the user then stops it themselves.
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+        await store.send(.scanToggleTapped) {
+            $0.isScanning = false
+        }
+
+        // Simulates DeviceDetail being pushed then popped back to Scanner: onAppear fires again
+        // on the same persistent state, and must not override the user's own stop.
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
         #expect(store.state.isScanning == false)
 
-        fakeScanner.finish()
+        await store.send(.onDisappear)
         await store.finish()
     }
 
@@ -317,8 +352,12 @@ struct ScannerFeatureTests {
             $0.scanMode = .manual
         }
 
-        let state = ScannerFeature.State()
+        var state = ScannerFeature.State()
         #expect(state.displayMode == .radar)
+        // This test's `.onAppear` below represents a *later* reappearance (see comment below),
+        // not the initial launch, so Manual mode's launch-time auto-start must already be marked
+        // fired — otherwise it'd spawn a real scan effect this test never cancels.
+        state.hasAutoStartedInitialManualScan = true
 
         let store = TestStore(initialState: state) {
             ScannerFeature()

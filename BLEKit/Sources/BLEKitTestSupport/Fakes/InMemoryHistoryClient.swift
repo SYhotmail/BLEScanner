@@ -21,11 +21,16 @@ public actor InMemoryHistoryClient {
         recordsByIdentifier.removeValue(forKey: identifier)
     }
 
+    public func deleteAll() {
+        recordsByIdentifier.removeAll()
+    }
+
     public nonisolated var client: HistoryClient {
         HistoryClient(
             upsert: { await self.upsert($0) },
             fetchAll: { await self.fetchAll() },
-            delete: { await self.delete(identifier: $0) }
+            delete: { await self.delete(identifier: $0) },
+            deleteAll: { await self.deleteAll() }
         )
     }
 }

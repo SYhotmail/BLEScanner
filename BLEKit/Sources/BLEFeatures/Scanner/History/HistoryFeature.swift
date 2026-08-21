@@ -21,6 +21,12 @@ public struct HistoryFeature {
         case recordsLoaded([HistoryRecordDTO])
         case loadFailed(String)
         case recordUpserted(HistoryRecordDTO)
+        case deleteButtonTapped(HistoryRecordDTO.ID)
+        case recordDeleted(String)
+        case deleteFailed(String)
+        case eraseAllButtonTapped
+        case allRecordsErased
+        case eraseAllFailed(String)
     }
 
     @Dependency(\.history) var history
@@ -53,6 +59,43 @@ public struct HistoryFeature {
 
             case let .recordUpserted(record):
                 state.records[id: record.id] = record
+                return .none
+
+            case let .deleteButtonTapped(id):
+                guard let identifier = state.records[id: id]?.identifier else { return .none }
+                let history = history
+                return .run { send in
+                    do {
+                        try await history.delete(identifier)
+                        await send(.recordDeleted(identifier))
+                    } catch {
+                        await send(.deleteFailed(error.localizedDescription))
+                    }
+                }
+
+            case let .recordDeleted(identifier):
+                state.records.remove(id: identifier)
+                return .none
+
+            case .deleteFailed:
+                return .none
+
+            case .eraseAllButtonTapped:
+                let history = history
+                return .run { send in
+                    do {
+                        try await history.deleteAll()
+                        await send(.allRecordsErased)
+                    } catch {
+                        await send(.eraseAllFailed(error.localizedDescription))
+                    }
+                }
+
+            case .allRecordsErased:
+                state.records.removeAll()
+                return .none
+
+            case .eraseAllFailed:
                 return .none
             }
         }

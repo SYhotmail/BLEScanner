@@ -17,6 +17,14 @@ public struct ScannerFeature {
         public var devices: IdentifiedArrayOf<DiscoveredDevice> = []
         public var isScanning = false
         public var bluetoothState: BluetoothState = .unknown
+        /// Whether Manual mode's launch-time auto-start (see `.onAppear`) has already fired.
+        /// Manual mode starts scanning automatically the first time the Scanner screen appears,
+        /// same as Periodic mode's "starts as soon as you open the Scanner screen" — but only
+        /// once: a later `.onAppear` (the screen reappearing after Settings, or a popped
+        /// `DeviceDetailFeature`) must not override the user's own subsequent start/stop control
+        /// via `scanToggleTapped`. Irrelevant for Periodic mode, which always (re)starts on
+        /// every `.onAppear` regardless.
+        public var hasAutoStartedInitialManualScan = false
         public var history = HistoryFeature.State()
         @Presents public var destination: DeviceDetailFeature.State?
         /// Snapshot of the device shown in the "Raw Advertisement Data" sheet, opened from a
@@ -147,10 +155,15 @@ public struct ScannerFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                let shouldAutoStartManualScan = state.settings.scanMode == .manual && !state.hasAutoStartedInitialManualScan
+                if shouldAutoStartManualScan {
+                    state.hasAutoStartedInitialManualScan = true
+                }
+                let shouldStartScanning = state.settings.scanMode == .periodic || shouldAutoStartManualScan
                 return .merge(
                     .send(.history(.onAppear)),
                     .send(.startRangingIfNeeded),
-                    state.settings.scanMode == .periodic ? startScanning(into: &state) : .none
+                    shouldStartScanning ? startScanning(into: &state) : .none
                 )
 
             case .onDisappear:

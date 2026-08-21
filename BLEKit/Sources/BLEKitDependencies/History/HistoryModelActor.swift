@@ -39,6 +39,13 @@ public actor HistoryModelActor {
         }
         try modelContext.save()
     }
+
+    public func deleteAll() throws {
+        for record in try modelContext.fetch(FetchDescriptor<HistoryRecord>()) {
+            modelContext.delete(record)
+        }
+        try modelContext.save()
+    }
 }
 
 extension HistoryRecordDTO {

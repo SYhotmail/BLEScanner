@@ -45,6 +45,24 @@ final class BLEScannerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Garage Sensor"].exists)
     }
 
+    /// "Copy Raw Data" is available on connectable rows too, not just non-connectable ones —
+    /// both seeded fixtures are connectable and carry a name + manufacturer data, so this
+    /// asserts the button now surfaces there. Actually tapping it hits the same class of
+    /// Simulator/XCUITest automation limitation documented on the History screen's
+    /// swipe-to-delete action above (a valid, on-screen frame that's consistently reported
+    /// non-hittable — confirmed here even as a real `Button`, not just a tap-gesture `Image`, so
+    /// it's a List-row quirk in this environment rather than something specific to gesture
+    /// type): `ScannerFeatureTests."rawAdvertisementDataCopyTapped copies the device's
+    /// advertisement text and clears the toast after a delay"` already covers the copy logic
+    /// itself via `TestStore`.
+    func testCopyRawAdvertisementDataButtonShowsOnConnectableRow() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        let copyButton = app.buttons["device.row.rawDataIndicator.11111111-1111-1111-1111-111111111111"]
+        XCTAssertTrue(copyButton.waitForExistence(timeout: 5))
+    }
+
     func testSidebarNavigationAcrossDestinations() throws {
         let app = launchApp()
 
@@ -72,6 +90,39 @@ final class BLEScannerUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Living Room Sensor"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Garage Sensor"].exists)
+    }
+
+    /// Swiping a row reveals the "Delete" swipe action, but reliably tapping it afterward hits
+    /// the same class of Simulator/XCUITest automation limitation documented on the Filter
+    /// screen's `Toggle` above: the revealed action button is found in the accessibility tree
+    /// but consistently reports a non-hittable frame, not merely a timing flake (confirmed via
+    /// several retries at different delays). `HistoryFeatureTests.deleteButtonTappedRemovesRecord`
+    /// covers the actual delete logic via `TestStore`; this only asserts the action surfaces.
+    func testHistorySwipeRevealsDeleteAction() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        app.segmentedControls["scanner.tabPicker"].buttons["History"].tap()
+
+        let garageRow = app.staticTexts["Garage Sensor"]
+        XCTAssertTrue(garageRow.waitForExistence(timeout: 5))
+        garageRow.swipeLeft()
+
+        XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 5))
+    }
+
+    func testHistoryEraseAllClearsEveryRecord() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        app.segmentedControls["scanner.tabPicker"].buttons["History"].tap()
+        XCTAssertTrue(app.staticTexts["Living Room Sensor"].waitForExistence(timeout: 5))
+
+        app.buttons["history.eraseAllButton"].tap()
+        app.buttons["Erase All"].tap()
+
+        XCTAssertTrue(app.staticTexts["No History"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Living Room Sensor"].exists)
     }
 
     /// Verifies the Filter screen renders its full structure. This does not drive the "By Name"

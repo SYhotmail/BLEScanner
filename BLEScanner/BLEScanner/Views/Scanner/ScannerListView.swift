@@ -67,7 +67,7 @@ struct ScannerDeviceRow: View {
     }
 
     private var hasRawAdvertisementData: Bool {
-        !device.isConnectable && !RawAdvertisementDataBuilder.structures(for: device).isEmpty
+        !RawAdvertisementDataBuilder.structures(for: device).isEmpty
     }
 
     var body: some View {
@@ -83,30 +83,29 @@ struct ScannerDeviceRow: View {
             .accessibilityIdentifier("device.row.\(deviceId)")
             .disabled(!device.isConnectable)
             Spacer()
-            if device.isConnectable {
-                Button("Connect") {
-                    store.send(.connectTapped(deviceId))
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .accessibilityIdentifier("device.row.connectButton.\(deviceId)")
-            } else {
-                VStack(alignment: .trailing, spacing: 20) {
+            VStack(spacing: 6) {
+                if device.isConnectable {
+                    Button("Connect") {
+                        store.send(.connectTapped(deviceId))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("device.row.connectButton.\(deviceId)")
+                } else {
                     Text("Not Connectable")
                         .font(.caption2)
-                    
-                }.foregroundStyle(.red)
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if hasRawAdvertisementData {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.caption)
-                    .padding(.bottom.union(.leading))
-                .accessibilityLabel("Raw advertisement data available. Long press to view.")
-                .accessibilityIdentifier("device.row.rawDataIndicator.\(deviceId)")
-                .onTapGesture {
-                    sendNeedCopy()
+                        .foregroundStyle(.red)
+                }
+                if hasRawAdvertisementData {
+                    Button {
+                        sendRawAdvertisementDataTapped()
+                    } label: {
+                        Text("Raw Data".uppercased())
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("device.row.rawDataIndicator.\(deviceId)")
                 }
             }
         }
@@ -139,10 +138,14 @@ struct ScannerDeviceRow: View {
             }
             if hasRawAdvertisementData {
                 Button("Raw Advertisement Data") {
-                    store.send(.rawAdvertisementDataTapped(deviceId))
+                    sendRawAdvertisementDataTapped()
                 }
             }
         }
+    }
+    
+    private func sendRawAdvertisementDataTapped() {
+        store.send(.rawAdvertisementDataTapped(deviceId))
     }
 
     private func handleLongPress() {

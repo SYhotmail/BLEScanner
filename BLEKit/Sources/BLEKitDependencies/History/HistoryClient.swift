@@ -9,6 +9,7 @@ public struct HistoryClient: Sendable {
     public var upsert: @Sendable (HistoryRecordDTO) async throws -> Void
     public var fetchAll: @Sendable () async throws -> [HistoryRecordDTO] = { [] }
     public var delete: @Sendable (String) async throws -> Void
+    public var deleteAll: @Sendable () async throws -> Void
 }
 
 extension HistoryClient: DependencyKey {
@@ -27,7 +28,8 @@ extension HistoryClient: DependencyKey {
         return HistoryClient(
             upsert: { try await actor.upsert($0) },
             fetchAll: { try await actor.fetchAll() },
-            delete: { try await actor.delete(identifier: $0) }
+            delete: { try await actor.delete(identifier: $0) },
+            deleteAll: { try await actor.deleteAll() }
         )
     }()
 

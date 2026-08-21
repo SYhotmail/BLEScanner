@@ -79,4 +79,26 @@ struct HistoryModelActorTests {
         let all = try await actor.fetchAll()
         #expect(all.count == 1)
     }
+
+    @Test("deleteAll removes every record")
+    func deleteAllRemovesEveryRecord() async throws {
+        let actor = try Self.makeActor()
+        try await actor.upsert(HistoryRecordDTO(identifier: "AAA", lastRSSI: -50, lastSeenDate: .now))
+        try await actor.upsert(HistoryRecordDTO(identifier: "BBB", lastRSSI: -50, lastSeenDate: .now))
+
+        try await actor.deleteAll()
+
+        let all = try await actor.fetchAll()
+        #expect(all.isEmpty)
+    }
+
+    @Test("deleteAll on an empty store is a no-op")
+    func deleteAllOnEmptyStoreIsNoop() async throws {
+        let actor = try Self.makeActor()
+
+        try await actor.deleteAll()
+
+        let all = try await actor.fetchAll()
+        #expect(all.isEmpty)
+    }
 }
