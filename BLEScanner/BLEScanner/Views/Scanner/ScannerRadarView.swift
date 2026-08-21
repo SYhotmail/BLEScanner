@@ -3,27 +3,65 @@ import BLEKitCore
 import ComposableArchitecture
 import SwiftUI
 
+/// Mirrors the Android reference app's "Proximity" screen: instead of concentric rings around a
+/// center point, proximity buckets are stacked horizontal bands (Immediate at the bottom, nearest
+/// the viewer, up through Near/Far/Unknown at the top), each band's top edge a gentle upward arc
+/// rather than a straight line. Devices scatter within their band rather than sitting on a fixed
+/// ring, matching the reference's loose, non-radial placement.
 struct ScannerRadarView: View {
     let store: StoreOf<ScannerFeature>
 
-    private let rings: [Proximity] = [.immediate, .near, .far, .unknown]
+    /// Top-to-bottom band order.
+    private static let bands: [Proximity] = [.unknown, .far, .near, .immediate]
+
+    /// Height-fraction range (0 = top of the radar area, 1 = bottom) each band occupies.
+    private static func heightFraction(for band: Proximity) -> ClosedRange<CGFloat> {
+        switch band {
+        case .unknown: 0.0...0.15
+        case .far: 0.15...0.42
+        case .near: 0.42...0.70
+        case .immediate: 0.70...0.97
+        }
+    }
+
+    /// Background tint per band, deepening toward `.immediate` — closest devices sit in the
+    /// most saturated band, same visual logic as the Android reference's darkest-blue-at-bottom
+    /// wave stack.
+    private static func bandColor(for band: Proximity) -> Color {
+        switch band {
+        case .unknown: Color(.systemGray5)
+        case .far: Color.accentColor.opacity(0.25)
+        case .near: Color.accentColor.opacity(0.45)
+        case .immediate: Color.accentColor.opacity(0.7)
+        }
+    }
+
+    /// How far below the radar area's bottom edge the shared arc center sits, as a multiple of
+    /// the area's height. Every band boundary is drawn as an arc of a circle centered here, so
+    /// larger values flatten the curve and smaller values exaggerate it.
+    private static let arcCenterHeightFraction: CGFloat = 1.3
 
     var body: some View {
         let devices = store.filteredSortedDevices
 
         GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height) * 0.9
+            let width = proxy.size.width
+            let height = proxy.size.height
 
             ZStack {
-                ringsOverlay(size: size)
+                bandBackground(width: width, height: height)
 
-                ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
-                    deviceMarker(device: device, index: index, total: devices.count, size: size)
+                ForEach(Self.bands, id: \.rawValue) { band in
+                    bandLabel(band, width: width, height: height)
+                }
+
+                ForEach(devices) { device in
+                    deviceMarker(device: device, width: width, height: height)
                 }
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
+            .frame(width: width, height: height)
+            .clipped()
         }
-        .padding()
         .overlay {
             if devices.isEmpty {
                 ContentUnavailableView(
@@ -34,34 +72,48 @@ struct ScannerRadarView: View {
         }
     }
 
+    /// Layers a full-bleed "unknown" background with successively smaller, more saturated
+    /// circles stacked on top — since each is centered on the same point and strictly nested
+    /// (their radii shrink from `.far` to `.immediate`), this reproduces stacked bands without
+    /// having to hand-build annulus paths.
     @ViewBuilder
-    private func ringsOverlay(size: CGFloat) -> some View {
-        ForEach(Array(rings.enumerated()), id: \.offset) { index, proximity in
-            let ringRadius = size / 2 * CGFloat(index + 1) / CGFloat(rings.count)
+    private func bandBackground(width: CGFloat, height: CGFloat) -> some View {
+        let center = CGPoint(x: width / 2, y: Self.arcCenterHeightFraction * height)
+        Rectangle().fill(Self.bandColor(for: .unknown))
+        ForEach([Proximity.far, .near, .immediate], id: \.rawValue) { band in
+            let topFraction = Self.heightFraction(for: band).lowerBound
+            let radius = center.y - topFraction * height
             Circle()
-                .stroke(.secondary.opacity(0.3), lineWidth: 1)
-                .frame(width: ringRadius * 2, height: ringRadius * 2)
-            Text(proximity.rawValue.capitalized)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .offset(y: -ringRadius + 10)
+                .fill(Self.bandColor(for: band))
+                .frame(width: radius * 2, height: radius * 2)
+                .position(center)
         }
     }
 
-    private func deviceMarker(device: DiscoveredDevice, index: Int, total: Int, size: CGFloat) -> some View {
-        let ringIndex = rings.firstIndex(of: device.proximity) ?? rings.count - 1
-        let radius = size / 2 * CGFloat(ringIndex + 1) / CGFloat(rings.count)
-        let angle = CGFloat(index) / CGFloat(max(total, 1)) * 2 * .pi
-        let x = size / 2 + radius * 0.75 * cos(angle)
-        let y = size / 2 + radius * 0.75 * sin(angle)
+    private func bandLabel(_ band: Proximity, width: CGFloat, height: CGFloat) -> some View {
+        let y = Self.heightFraction(for: band).lowerBound * height + 16
+        return Text(band.rawValue.capitalized)
+            .font(.caption2.bold())
+            .foregroundStyle(.white.opacity(0.85))
+            .frame(width: width, alignment: .leading)
+            .padding(.leading, 12)
+            .position(x: width / 2, y: y)
+    }
+
+    private func deviceMarker(device: DiscoveredDevice, width: CGFloat, height: CGFloat) -> some View {
+        let band = Self.heightFraction(for: device.proximity)
+        let yFraction = band.lowerBound + Self.scatterFraction(seed: device.identifier, salt: 1) * (band.upperBound - band.lowerBound)
+        let xFraction = 0.12 + Self.scatterFraction(seed: device.identifier, salt: 2) * 0.76
 
         return Button {
             store.send(.rowTapped(device.id))
         } label: {
             VStack(spacing: 2) {
-                Circle()
-                    .fill(Color.colorForDiscoveredDevice(device))
-                    .frame(width: 14, height: 14)
+                Text("\(device.rssi)")
+                    .font(.caption2.monospacedDigit().bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(Color.colorForDiscoveredDevice(device), in: Circle())
                 Text(device.name ?? "n/a")
                     .font(.caption2)
                     .lineLimit(1)
@@ -69,6 +121,16 @@ struct ScannerRadarView: View {
             }
         }
         .buttonStyle(.plain)
-        .position(x: x, y: y)
+        .position(x: xFraction * width, y: yFraction * height)
+    }
+
+    /// A `[0, 1)` value derived deterministically from `seed`, so a device's scatter position
+    /// within its band stays put across recomputes instead of jumping on every RSSI update.
+    /// `salt` decorrelates the x/y draws for the same device. Cosmetic placement only — no need
+    /// for `Hasher` (which is randomized per process and would move markers between launches).
+    private static func scatterFraction(seed: UUID, salt: Int) -> CGFloat {
+        let bytes = withUnsafeBytes(of: seed.uuid) { Array($0) }
+        let sum = bytes.enumerated().reduce(0) { $0 + Int($1.element) * ($1.offset + salt * 7 + 1) }
+        return CGFloat(sum % 1000) / 1000
     }
 }
