@@ -381,7 +381,8 @@ struct ScannerFeatureTests {
             $0.minimumRSSI = -60
         }
 
-        await store.send(.recomputeFilteredDevices) {
+        await store.send(.recomputeFilteredDevices)
+        await store.receive(\.filteredSortedDevicesComputed) {
             $0.filteredSortedDevices = [DiscoveredDeviceFixtures.plainSensor]
         }
     }
@@ -502,6 +503,8 @@ struct ScannerFeatureTests {
 
         await store.send(.favoriteToggled(device.id)) {
             $0.$favoriteDeviceIdentifiers.withLock { _ = $0.insert(device.id) }
+        }
+        await store.receive(\.filteredSortedDevicesComputed) {
             $0.filteredSortedDevices = [device]
             $0.favoriteSortedDevices = [device]
         }
@@ -509,6 +512,8 @@ struct ScannerFeatureTests {
         // Toggling again un-stars it.
         await store.send(.favoriteToggled(device.id)) {
             $0.$favoriteDeviceIdentifiers.withLock { _ = $0.remove(device.id) }
+        }
+        await store.receive(\.filteredSortedDevicesComputed) {
             $0.favoriteSortedDevices = []
         }
     }
@@ -553,6 +558,8 @@ struct ScannerFeatureTests {
 
         await store.send(.beaconRangingEvent(.rangedBeacons([ranged]))) {
             $0.devices[id: DiscoveredDeviceFixtures.iBeaconDevice.id]?.beacon?.rangedProximity = .immediate
+        }
+        await store.receive(\.filteredSortedDevicesComputed) {
             $0.filteredSortedDevices[id: DiscoveredDeviceFixtures.iBeaconDevice.id]?.beacon?.rangedProximity = .immediate
         }
     }

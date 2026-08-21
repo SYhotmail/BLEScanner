@@ -60,7 +60,7 @@ struct ScannerRadarView: View {
         } label: {
             VStack(spacing: 2) {
                 Circle()
-                    .fill(Color.rssiColor(for: device.rssi))
+                    .fill(Color.colorForDiscoveredDevice(device))
                     .frame(width: 14, height: 14)
                 Text(device.name ?? "n/a")
                     .font(.caption2)

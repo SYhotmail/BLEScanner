@@ -29,10 +29,11 @@ public struct ScannerFeature {
         @Shared(.favoriteDeviceIdentifiers) public var favoriteDeviceIdentifiers: Set<UUID> = []
 
         /// Cached result of filtering/sorting `devices` by `filterCriteria`. Recomputed
-        /// explicitly (via `recomputeFilteredSortedDevices()`) whenever either input changes,
-        /// rather than on every read — `devices` can update many times a second while scanning,
-        /// and this is read from SwiftUI view bodies, sometimes more than once per body
-        /// evaluation.
+        /// explicitly whenever either input changes, rather than on every read — `devices` can
+        /// update many times a second while scanning, and this is read from SwiftUI view
+        /// bodies, sometimes more than once per body evaluation. The filter/sort work itself
+        /// runs off the main actor (see `recomputeFilteredSortedDevicesEffect`); only the
+        /// resulting assignment happens on `main`, via `.filteredSortedDevicesComputed`.
         public internal(set) var filteredSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
 
         /// Currently-visible devices the user has starred, sorted by RSSI. Recomputed alongside
@@ -72,6 +73,7 @@ public struct ScannerFeature {
         case history(HistoryFeature.Action)
         case destination(PresentationAction<DeviceDetailFeature.Action>)
         case recomputeFilteredDevices
+        case filteredSortedDevicesComputed(filtered: IdentifiedArrayOf<DiscoveredDevice>, favorites: IdentifiedArrayOf<DiscoveredDevice>)
         case rescanTapped
     }
 
@@ -80,6 +82,7 @@ public struct ScannerFeature {
         case ranging
         case restart
         case recomputeDebounce
+        case recompute
         case copyFeedback
     }
 
@@ -104,8 +107,31 @@ public struct ScannerFeature {
 
     public init() {}
     
-    private static func recomputeFilteredSortedDevices(state: inout State) {
-        state.recomputeFilteredSortedDevices()
+    /// Kicks off the filter/sort of `devices` on a background task; the reducer only ever
+    /// assigns the result (via `.filteredSortedDevicesComputed`) on the main actor. Cancels any
+    /// still-running recompute so an in-flight result from stale `devices`/`filterCriteria`
+    /// can't clobber one started after it.
+    private func recomputeFilteredSortedDevicesEffect(
+        devices: IdentifiedArrayOf<DiscoveredDevice>,
+        filterCriteria: FilterCriteria,
+        favoriteDeviceIdentifiers: Set<UUID>
+    ) -> Effect<Action> {
+        .run { send in
+            let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
+            let filteredSorted = IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
+            let favorites = devices.filter { favoriteDeviceIdentifiers.contains($0.id) }
+            let favoritesSorted = IdentifiedArray(uniqueElements: favorites.sorted { $0.rssi > $1.rssi })
+            await send(.filteredSortedDevicesComputed(filtered: filteredSorted, favorites: favoritesSorted))
+        }
+        .cancellable(id: CancelID.recompute, cancelInFlight: true)
+    }
+    
+    private func recomputeFilteredSortedDevicesEffect(state: State) -> Effect<Action> {
+        recomputeFilteredSortedDevicesEffect(
+            devices: state.devices,
+            filterCriteria: state.filterCriteria,
+            favoriteDeviceIdentifiers: state.favoriteDeviceIdentifiers
+        )
     }
 
     public var body: some ReducerOf<Self> {
@@ -150,9 +176,8 @@ public struct ScannerFeature {
                 return .none
 
             case let .beaconRangingEvent(.rangedBeacons(rangedBeacons)):
-                apply(rangedBeacons: rangedBeacons, to: &state)
-                return .none
-
+                guard apply(rangedBeacons: rangedBeacons, to: &state) else { return .none }
+                return recomputeFilteredSortedDevicesEffect(state: state)
             case let .rowTapped(id):
                 guard let device = state.devices[id: id] else { return .none }
                 state.destination = DeviceDetailFeature.State(device: device)
@@ -172,9 +197,7 @@ public struct ScannerFeature {
                 } else {
                     state.$favoriteDeviceIdentifiers.withLock { _ = $0.insert(id) }
                 }
-                Self.recomputeFilteredSortedDevices(state: &state)
-                return .none
-
+                return recomputeFilteredSortedDevicesEffect(state: state)
             case let .trackBeaconTapped(beacon):
                 if !state.knownBeacons.contains(where: { $0.uuid == beacon.uuid }) {
                     let label = "Beacon \(beacon.uuid.uuidString.prefix(8))"
@@ -237,7 +260,10 @@ public struct ScannerFeature {
                 return .none
 
             case .recomputeFilteredDevices:
-                Self.recomputeFilteredSortedDevices(state: &state)
+                return recomputeFilteredSortedDevicesEffect(state: state)
+            case let .filteredSortedDevicesComputed(filtered, favorites):
+                state.filteredSortedDevices = filtered
+                state.favoriteSortedDevices = favorites
                 return .none
 
             case .rescanTapped:
@@ -387,7 +413,8 @@ public struct ScannerFeature {
         )
     }
 
-    private func apply(rangedBeacons: [RangedBeacon], to state: inout State) {
+    @discardableResult
+    private func apply(rangedBeacons: [RangedBeacon], to state: inout State) -> Bool {
         var didUpdateDevices = false
         for ranged in rangedBeacons {
             for var device in state.devices where device.beacon?.uuid == ranged.uuid {
@@ -396,8 +423,6 @@ public struct ScannerFeature {
                 didUpdateDevices = true
             }
         }
-        if didUpdateDevices {
-            Self.recomputeFilteredSortedDevices(state: &state)
-        }
+        return didUpdateDevices
     }
 }

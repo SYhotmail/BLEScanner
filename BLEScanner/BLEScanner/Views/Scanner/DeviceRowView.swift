@@ -14,7 +14,10 @@ struct DeviceRowView: View {
                     .font(.caption.monospacedDigit().bold())
                     .foregroundStyle(.white)
                     .padding()
-                    .background(Color.rssiColor(for: device.rssi), in: Circle())
+                    .background(
+                        Color.colorForDiscoveredDevice(device),
+                        in: Circle()
+                    )
                     .layoutPriority(1)
                     .onTapGesture(perform: onTap)
 

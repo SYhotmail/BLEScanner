@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		000EB774B4AB0027F9637B27 /* BLEScannerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66930F5F95C259B650586B18 /* BLEScannerUITests.swift */; };
 		0344D4A162A6511FC6E9F61E /* AddKnownBeaconSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC28CE4A255012CFF1DBED0B /* AddKnownBeaconSheet.swift */; };
-		085873410A387E1531DB4ADA /* Color+RSSI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E5E108F241D1313D363A677 /* Color+RSSI.swift */; };
+		0C41B71D7276317F141DF246 /* Color+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4158532FA410C9D528ABB41 /* Color+Device.swift */; };
 		270A79C1D8E4CC111B800CD6 /* AutopilotPeripheralConnectionClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7EAA734CE9F69D33CC3C86 /* AutopilotPeripheralConnectionClient.swift */; };
 		298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756C7251F42B2BD8B16E5F15 /* FilterView.swift */; };
 		315CACF862CDC542FE03EEB5 /* Test.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282FF7CDC9323A52B4D65EF5 /* Test.swift */; };
@@ -52,7 +52,6 @@
 		0AFC983B184E409109BE83B0 /* BLEKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BLEKit; path = ../BLEKit; sourceTree = SOURCE_ROOT; };
 		1795C929E497F2337EE19DB2 /* FavoritesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesListView.swift; sourceTree = "<group>"; };
 		1B3BF259399A2E38FE40273E /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
-		1E5E108F241D1313D363A677 /* Color+RSSI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+RSSI.swift"; sourceTree = "<group>"; };
 		282FF7CDC9323A52B4D65EF5 /* Test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Test.swift; sourceTree = "<group>"; };
 		292132E15F02AB78E92D3D94 /* BLEScanner.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BLEScanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36E477E6C43FEEF96F739460 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
@@ -68,6 +67,7 @@
 		79B031A4FF1ACD6F6F2DAB9C /* RawAdvertisementDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawAdvertisementDataView.swift; sourceTree = "<group>"; };
 		7B1276CD743854A7864F4757 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		8637071061F81E212AA2AE41 /* ScannerRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerRadarView.swift; sourceTree = "<group>"; };
+		A4158532FA410C9D528ABB41 /* Color+Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Device.swift"; sourceTree = "<group>"; };
 		BB7EAA734CE9F69D33CC3C86 /* AutopilotPeripheralConnectionClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotPeripheralConnectionClient.swift; sourceTree = "<group>"; };
 		BCB278E25EE14D2961A354ED /* DeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailView.swift; sourceTree = "<group>"; };
 		CEE021BC83F39439B1F23860 /* BLEScannerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScannerApp.swift; sourceTree = "<group>"; };
@@ -97,7 +97,7 @@
 		06CD0AEDB74F808329716714 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
-				1E5E108F241D1313D363A677 /* Color+RSSI.swift */,
+				A4158532FA410C9D528ABB41 /* Color+Device.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -339,7 +339,7 @@
 				E4B1EA6931354F9E53008BE0 /* BLEScannerApp.swift in Sources */,
 				E81B240CE685232882ABB354 /* CharacteristicDetailView.swift in Sources */,
 				A9765748D26F08F93122DAA8 /* CharacteristicRowView.swift in Sources */,
-				085873410A387E1531DB4ADA /* Color+RSSI.swift in Sources */,
+				0C41B71D7276317F141DF246 /* Color+Device.swift in Sources */,
 				EA3A79A3B0180767112D759C /* DeviceDetailView.swift in Sources */,
 				AE960EF4E7501C1BD832E0FE /* DeviceRowView.swift in Sources */,
 				86A5E18D18EF113530DA4CBC /* FavoritesListView.swift in Sources */,

@@ -25,15 +25,20 @@ enum BLEAdvertisementDecoder {
 /// queue (passed as both the delegate queue and the queue every public method dispatches
 /// onto), which is what backs the `@unchecked Sendable` conformance.
 public final class LiveBLECentralManager: NSObject, BLECentralManaging, @unchecked Sendable {
-    private let queue = DispatchQueue(label: "com.blescanner.central-manager")
-    private var centralManager: CBCentralManager!
+    private let queue: DispatchQueue
+    private let centralManager: CBCentralManager
+    
     private var scanContinuation: AsyncStream<BLEScanEvent>.Continuation?
     private var discoveredPeripherals: [UUID: CBPeripheral] = [:]
     private var connections: [UUID: LiveBLEPeripheralConnection] = [:]
 
     override public init() {
+        let queue = DispatchQueue(label: "com.blescanner.central-manager")
+        let centralManager = CBCentralManager(delegate: nil, queue: queue)
+        self.queue = queue
+        self.centralManager = centralManager
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: queue)
+        centralManager.delegate = self
     }
 
     public func scanEvents() -> AsyncStream<BLEScanEvent> {
