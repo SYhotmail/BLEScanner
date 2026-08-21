@@ -5,25 +5,19 @@ import SwiftUI
 
 struct ScannerListView: View {
     let store: StoreOf<ScannerFeature>
+    @State private var searchText = ""
 
     var body: some View {
-        let devices = store.filteredSortedDevices
-        List {
-            ForEach(devices) { device in
-                ScannerDeviceRow(store: store, device: device)
-            }
+        SearchableList(items: store.filteredSortedDevices, matches: SearchMatcher.matches, searchText: $searchText) { device in
+            ScannerDeviceRow(store: store, device: device)
+        } emptyContent: {
+            ContentUnavailableView(
+                store.isScanning ? "Scanning…" : "No Devices Found",
+                systemImage: "dot.radiowaves.left.and.right"
+            )
         }
-        .listStyle(.plain)
         .refreshable {
             await store.send(.rescanTapped).finish()
-        }
-        .overlay {
-            if devices.isEmpty {
-                ContentUnavailableView(
-                    store.isScanning ? "Scanning…" : "No Devices Found",
-                    systemImage: "dot.radiowaves.left.and.right"
-                )
-            }
         }
         .overlay {
             if let device = store.rawAdvertisementDataDevice {

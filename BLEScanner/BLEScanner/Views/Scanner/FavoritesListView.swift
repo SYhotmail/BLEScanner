@@ -9,23 +9,17 @@ import SwiftUI
 /// `ScannerFeature.State.favoriteSortedDevices`).
 struct FavoritesListView: View {
     let store: StoreOf<ScannerFeature>
+    @State private var searchText = ""
 
     var body: some View {
-        let devices = store.favoriteSortedDevices
-        List {
-            ForEach(devices) { device in
-                ScannerDeviceRow(store: store, device: device)
-            }
-        }
-        .listStyle(.plain)
-        .overlay {
-            if devices.isEmpty {
-                ContentUnavailableView(
-                    "No Favorites",
-                    systemImage: "star",
-                    description: Text("Long-press a connectable device on the Nearby tab to add it here.")
-                )
-            }
+        SearchableList(items: store.favoriteSortedDevices, matches: SearchMatcher.matches, searchText: $searchText) { device in
+            ScannerDeviceRow(store: store, device: device)
+        } emptyContent: {
+            ContentUnavailableView(
+                "No Favorites",
+                systemImage: "star",
+                description: Text("Long-press a connectable device on the Nearby tab to add it here.")
+            )
         }
     }
 }

@@ -6,47 +6,40 @@ import SwiftUI
 struct HistoryView: View {
     let store: StoreOf<HistoryFeature>
     @State private var isEraseAllConfirmationPresented = false
+    @State private var searchText = ""
 
     var body: some View {
-        List {
-            ForEach(store.records) { record in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(record.name ?? "n/a".uppercased())
-                        .font(.subheadline)
-                    Text(record.identifier)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                    Text("\(record.lastRSSI) dBm")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    HStack {
-                        Text("Added \(record.firstSeenDate.formatted(date: .abbreviated, time: .shortened))")
-                        Spacer()
-                        Text("Last seen \(record.lastSeenDate.formatted(date: .abbreviated, time: .shortened))")
-                    }
+        SearchableList(items: store.records, matches: SearchMatcher.matches, searchText: $searchText, isLoading: store.isLoading) { record in
+            VStack(alignment: .leading, spacing: 2) {
+                Text(record.name ?? "n/a".uppercased())
+                    .font(.subheadline)
+                Text(record.identifier)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                Text("\(record.lastRSSI) dBm")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+
+                HStack {
+                    Text("Added \(record.firstSeenDate.formatted(date: .abbreviated, time: .shortened))")
+                    Spacer()
+                    Text("Last seen \(record.lastSeenDate.formatted(date: .abbreviated, time: .shortened))")
                 }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        store.send(.deleteButtonTapped(record.id))
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    .accessibilityIdentifier("history.deleteButton.\(record.id)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    store.send(.deleteButtonTapped(record.id))
+                } label: {
+                    Label("Delete", systemImage: "trash")
                 }
+                .accessibilityIdentifier("history.deleteButton.\(record.id)")
             }
-        }
-        .listStyle(.plain)
-        .overlay {
-            if store.isLoading {
-                ProgressView()
-            } else if store.records.isEmpty {
-                ContentUnavailableView("No History", systemImage: "clock")
-            }
+        } emptyContent: {
+            ContentUnavailableView("No History", systemImage: "clock")
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

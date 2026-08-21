@@ -45,6 +45,20 @@ final class BLEScannerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Garage Sensor"].exists)
     }
 
+    func testSearchFiltersNearByListByName() throws {
+        let app = launchApp()
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Garage Sensor"].waitForExistence(timeout: 5))
+
+        let searchField = app.searchFields["Search by name or ID"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText("garage")
+
+        XCTAssertTrue(app.staticTexts["Garage Sensor"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Living Room Sensor"].exists)
+    }
+
     /// "Copy Raw Data" is available on connectable rows too, not just non-connectable ones —
     /// both seeded fixtures are connectable and carry a name + manufacturer data, so this
     /// asserts the button now surfaces there. Actually tapping it hits the same class of
@@ -90,6 +104,21 @@ final class BLEScannerUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Living Room Sensor"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Garage Sensor"].exists)
+    }
+
+    func testSearchFiltersHistoryListByName() throws {
+        let app = launchApp()
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        app.segmentedControls["scanner.tabPicker"].buttons["History"].tap()
+        XCTAssertTrue(app.staticTexts["Garage Sensor"].waitForExistence(timeout: 5))
+
+        let searchField = app.searchFields["Search by name or ID"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText("garage")
+
+        XCTAssertTrue(app.staticTexts["Garage Sensor"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Living Room Sensor"].exists)
     }
 
     /// Swiping a row reveals the "Delete" swipe action, but reliably tapping it afterward hits
