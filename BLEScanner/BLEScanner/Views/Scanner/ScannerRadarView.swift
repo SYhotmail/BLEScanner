@@ -37,9 +37,15 @@ struct ScannerRadarView: View {
     }
 
     /// How far below the radar area's bottom edge the shared arc center sits, as a multiple of
-    /// the area's height. Every band boundary is drawn as an arc of a circle centered here, so
-    /// larger values flatten the curve and smaller values exaggerate it.
-    private static let arcCenterHeightFraction: CGFloat = 1.3
+    /// the area's *width* — not height. Every band boundary is drawn as an arc of a circle
+    /// centered here; scaling by width (rather than height, as an earlier version of this did)
+    /// keeps the smallest band's radius comfortably above half the frame's width on any aspect
+    /// ratio, which guarantees that circle can only ever show as a clipped arc. Scaling by
+    /// height instead let the circle shrink below `width / 2` on wider/more-square frames (e.g.
+    /// an iPad's detail pane), letting its sides curl back into view as a full closed circle
+    /// instead of an arc. Larger values flatten the curve; smaller values (below ~0.5) risk
+    /// reintroducing the closed-circle bug.
+    private static let arcCenterWidthMargin: CGFloat = 1.6
 
     var body: some View {
         let devices = store.filteredSortedDevices
@@ -78,7 +84,7 @@ struct ScannerRadarView: View {
     /// having to hand-build annulus paths.
     @ViewBuilder
     private func bandBackground(width: CGFloat, height: CGFloat) -> some View {
-        let center = CGPoint(x: width / 2, y: Self.arcCenterHeightFraction * height)
+        let center = CGPoint(x: width / 2, y: height + Self.arcCenterWidthMargin * width)
         Rectangle().fill(Self.bandColor(for: .unknown))
         ForEach([Proximity.far, .near, .immediate], id: \.rawValue) { band in
             let topFraction = Self.heightFraction(for: band).lowerBound
