@@ -12,7 +12,7 @@ struct ScannerRadarView: View {
     let store: StoreOf<ScannerFeature>
 
     /// Top-to-bottom band order.
-    private static let bands: [Proximity] = [.unknown, .far, .near, .immediate]
+    private static let bands = Proximity.allCases
 
     /// Height-fraction range (0 = top of the radar area, 1 = bottom) each band occupies.
     private static func heightFraction(for band: Proximity) -> ClosedRange<CGFloat> {
@@ -95,10 +95,18 @@ struct ScannerRadarView: View {
                 .position(center)
         }
     }
+    
+    private static func bandLabel(_ band: Proximity) -> String {
+        guard band != .unknown else {
+            return "Too Far"
+        }
+        
+        return band.rawValue
+    }
 
     private func bandLabel(_ band: Proximity, width: CGFloat, height: CGFloat) -> some View {
         let y = Self.heightFraction(for: band).lowerBound * height + 16
-        return Text(band.rawValue.capitalized)
+        return Text(Self.bandLabel(band).localizedCapitalized)
             .font(.caption2.bold())
             .foregroundStyle(.white.opacity(0.85))
             .frame(width: width, alignment: .leading)

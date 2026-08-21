@@ -29,12 +29,12 @@ struct DeviceRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name ?? "n/a")
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .truncationMode(.tail)
                 Text(device.identifier.uuidString)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .truncationMode(.middle)
                 HStack(spacing: 8) {
                     if device.beacon != nil {
@@ -52,7 +52,7 @@ struct DeviceRowView: View {
                 .lineLimit(1)
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
