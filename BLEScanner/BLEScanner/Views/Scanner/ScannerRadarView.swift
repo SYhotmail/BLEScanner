@@ -11,7 +11,9 @@ import SwiftUI
 struct ScannerRadarView: View {
     let store: StoreOf<ScannerFeature>
 
-    /// Top-to-bottom band order.
+    /// The bands to render labels for. Order doesn't affect layout (`heightFraction` positions
+    /// each one independently) — `Proximity.allCases` is bottom-to-top: `.immediate`, nearest
+    /// the viewer, first, up through `.unknown` at the top.
     private static let bands = Proximity.allCases
 
     /// Height-fraction range (0 = top of the radar area, 1 = bottom) each band occupies.
