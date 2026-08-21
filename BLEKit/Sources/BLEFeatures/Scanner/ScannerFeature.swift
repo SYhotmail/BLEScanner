@@ -261,6 +261,18 @@ public struct ScannerFeature {
             case .history:
                 return .none
 
+            // Disconnecting on leaving the detail screen is handled here, in the parent, rather
+            // than via the child's own `.onDisappear`: this `Reduce` runs before `.ifLet` nils
+            // `state.destination` on dismissal, so `state.destination` is still populated here —
+            // whereas a `.send` from the child view's `.onDisappear` races with that nilling
+            // (dismissal can be triggered by the system, e.g. a swipe-back or the back button,
+            // independent of the view's own teardown timing) and was hitting TCA's "received a
+            // presentation action when destination state was absent" runtime warning.
+            case .destination(.dismiss):
+                guard let identifier = state.destination?.device.identifier else { return .none }
+                let bluetoothScanner = bluetoothScanner
+                return .run { _ in bluetoothScanner.disconnect(identifier: identifier) }
+
             case .destination:
                 return .none
 

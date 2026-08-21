@@ -62,7 +62,6 @@ struct DeviceDetailView: View {
         }
         .navigationTitle(store.device.name ?? "Device")
         .navigationBarTitleDisplayMode(.inline)
-        .onDisappear { store.send(.onDisappear) }
     }
 
     private var isConnectedOrConnecting: Bool {

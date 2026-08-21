@@ -33,3 +33,13 @@ extension DependencyValues {
         set { self[BluetoothScannerClient.self] = newValue }
     }
 }
+
+extension BluetoothScannerClient {
+    /// Best-effort disconnect for a peripheral by identifier, silently doing nothing if no
+    /// cached connection exists — shared by call sites that just want "make sure this
+    /// peripheral is disconnected" without caring whether a connection was ever established.
+    public func disconnect(identifier: UUID) {
+        guard let connection = try? makeConnection(identifier) else { return }
+        connection.disconnect()
+    }
+}

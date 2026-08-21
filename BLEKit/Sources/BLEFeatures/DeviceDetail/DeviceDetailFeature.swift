@@ -22,7 +22,6 @@ public struct DeviceDetailFeature {
     }
 
     public enum Action: Equatable {
-        case onDisappear
         case connectTapped
         case disconnectTapped
         case connectionEvent(PeripheralConnectionEvent)
@@ -44,12 +43,6 @@ public struct DeviceDetailFeature {
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .onDisappear:
-                return .merge(
-                    .cancel(id: CancelID.connection),
-                    disconnectEffect(identifier: state.device.identifier)
-                )
-
             case .connectTapped:
                 state.connectionStatus = .connecting
                 return connectEffect(identifier: state.device.identifier)
@@ -141,10 +134,7 @@ public struct DeviceDetailFeature {
 
     private func disconnectEffect(identifier: UUID) -> Effect<Action> {
         let bluetoothScanner = bluetoothScanner
-        return .run { _ in
-            guard let connection = try? bluetoothScanner.makeConnection(identifier) else { return }
-            connection.disconnect()
-        }
+        return .run { _ in bluetoothScanner.disconnect(identifier: identifier) }
     }
 
     private func discoverServicesEffect(identifier: UUID) -> Effect<Action> {
