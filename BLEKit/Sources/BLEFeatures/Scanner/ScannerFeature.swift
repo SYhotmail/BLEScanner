@@ -9,6 +9,10 @@ public struct ScannerFeature {
     @ObservableState
     public struct State: Equatable {
         public var tab: ScanTab = .nearby
+        /// Seeded from `settings.defaultDisplayMode` once, in `init()` — not re-applied on every
+        /// `.onAppear`, since that fires again whenever this screen reappears after a pushed
+        /// `DeviceDetailFeature` is popped, which would otherwise stomp a mode the user had
+        /// manually toggled to (e.g. Radar) back to the settings default.
         public var displayMode: ScanDisplayMode = .list
         public var devices: IdentifiedArrayOf<DiscoveredDevice> = []
         public var isScanning = false
@@ -42,7 +46,9 @@ public struct ScannerFeature {
         /// `favoriteDeviceIdentifiers` itself is what actually persists the starring across scans.
         public internal(set) var favoriteSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
 
-        public init() {}
+        public init() {
+            displayMode = settings.defaultDisplayMode
+        }
 
         mutating func recomputeFilteredSortedDevices() {
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
@@ -141,7 +147,6 @@ public struct ScannerFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                state.displayMode = state.settings.defaultDisplayMode
                 return .merge(
                     .send(.history(.onAppear)),
                     .send(.startRangingIfNeeded),

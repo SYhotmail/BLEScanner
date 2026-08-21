@@ -303,6 +303,48 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
+    @Test("displayMode is seeded from settings.defaultDisplayMode once and isn't reset by a later onAppear")
+    func displayModeSeededOnceNotResetByOnAppear() async {
+        let fakeScanner = FakeBluetoothScannerClient()
+
+        // Written via a throwaway state's own $settings, then read back by a *second*,
+        // freshly-constructed `State()` below — @Shared storage is keyed by the storage key,
+        // not by which State instance wrote it, so this simulates "settings already had a
+        // non-default value when this screen was first created."
+        var seedState = ScannerFeature.State()
+        seedState.$settings.withLock {
+            $0.defaultDisplayMode = .radar
+            $0.scanMode = .manual
+        }
+
+        let state = ScannerFeature.State()
+        #expect(state.displayMode == .radar)
+
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.beaconRanging = FakeBeaconRangingClient().client
+            $0.history = InMemoryHistoryClient().client
+        }
+        store.exhaustivity = .off
+
+        await store.send(.displayModeToggled) {
+            $0.displayMode = .list
+        }
+
+        // Simulates DeviceDetail being pushed then popped back to Scanner: onAppear fires again
+        // on the same persistent state, and must not stomp the user's manual toggle back to the
+        // settings default.
+        await store.send(.onAppear)
+        await store.skipReceivedActions()
+        #expect(store.state.displayMode == .list)
+
+        fakeScanner.finish()
+        await store.finish()
+    }
+
     @Test("scanToggleTapped starts and stops scanning when scan mode is manual")
     func scanToggleTappedStartsAndStopsScanningWhenManual() async {
         let fakeScanner = FakeBluetoothScannerClient()
