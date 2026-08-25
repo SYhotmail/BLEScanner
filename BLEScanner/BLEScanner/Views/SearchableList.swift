@@ -12,6 +12,12 @@ struct SearchableList<Item: Identifiable, RowContent: View, EmptyContent: View>:
     let items: IdentifiedArrayOf<Item>
     let matches: (Item, String) -> Bool
     @Binding var searchText: String
+    // `.searchable`'s scroll-to-hide behavior piggybacks on the large-title collapse animation,
+    // which doesn't reliably fire here (the segmented tab Picker above swaps the scrolling List
+    // in and out). An explicit toggle sidesteps that entirely and is deterministic regardless of
+    // scroll position or content length. Owned by the caller (not local `@State`) so it survives
+    // this view being torn down and recreated when the caller's own containing tab switches.
+    @Binding var isSearchPresented: Bool
     var searchPrompt = "Search by name or ID"
     var isLoading = false
     @ViewBuilder let row: (Item) -> RowContent
@@ -26,7 +32,18 @@ struct SearchableList<Item: Identifiable, RowContent: View, EmptyContent: View>:
             row($0)
         }
         .listStyle(.plain)
-        .searchable(text: $searchText, prompt: searchPrompt)
+        .searchable(text: $searchText, isPresented: $isSearchPresented, prompt: searchPrompt)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    isSearchPresented.toggle()
+                } label: {
+                    Image(systemName: isSearchPresented ? "xmark.circle" : "magnifyingglass")
+                }
+                .accessibilityIdentifier("searchableList.searchToggleButton")
+                .accessibilityLabel(isSearchPresented ? "Hide Search" : "Show Search")
+            }
+        }
         .overlay {
             if isLoading {
                 ProgressView()

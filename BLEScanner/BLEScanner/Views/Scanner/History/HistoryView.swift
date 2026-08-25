@@ -5,11 +5,18 @@ import SwiftUI
 
 struct HistoryView: View {
     let store: StoreOf<HistoryFeature>
+    @Binding var searchText: String
+    @Binding var isSearchPresented: Bool
     @State private var isEraseAllConfirmationPresented = false
-    @State private var searchText = ""
 
     var body: some View {
-        SearchableList(items: store.records, matches: SearchMatcher.matches, searchText: $searchText, isLoading: store.isLoading) { record in
+        SearchableList(
+            items: store.records,
+            matches: SearchMatcher.matches,
+            searchText: $searchText,
+            isSearchPresented: $isSearchPresented,
+            isLoading: store.isLoading
+        ) { record in
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.name ?? "n/a".uppercased())
                     .font(.subheadline)

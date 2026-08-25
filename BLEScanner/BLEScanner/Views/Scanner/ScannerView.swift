@@ -6,6 +6,17 @@ import SwiftUI
 struct ScannerView: View {
     @Bindable var store: StoreOf<ScannerFeature>
 
+    // One (searchText, isSearchPresented) pair per tab, held here rather than in each tab's own
+    // view, since `store.tab`/`store.displayMode` switching below tears down and recreates those
+    // child views on every change — state owned by them would reset every time. `ScannerView`
+    // itself isn't torn down by either switch, so state hoisted here survives.
+    @State private var nearbySearchText = ""
+    @State private var nearbyIsSearchPresented = false
+    @State private var historySearchText = ""
+    @State private var historyIsSearchPresented = false
+    @State private var favoritesSearchText = ""
+    @State private var favoritesIsSearchPresented = false
+
     var body: some View {
         VStack(spacing: 0) {
             Picker("Tab", selection: tabBinding) {
@@ -21,9 +32,17 @@ struct ScannerView: View {
             case .nearby:
                 nearByContent
             case .history:
-                HistoryView(store: store.scope(state: \.history, action: \.history))
+                HistoryView(
+                    store: store.scope(state: \.history, action: \.history),
+                    searchText: $historySearchText,
+                    isSearchPresented: $historyIsSearchPresented
+                )
             case .favorites:
-                FavoritesListView(store: store)
+                FavoritesListView(
+                    store: store,
+                    searchText: $favoritesSearchText,
+                    isSearchPresented: $favoritesIsSearchPresented
+                )
             }
         }
         .navigationTitle("Scanner")
@@ -68,7 +87,11 @@ struct ScannerView: View {
         } else {
             switch store.displayMode {
             case .list:
-                ScannerListView(store: store)
+                ScannerListView(
+                    store: store,
+                    searchText: $nearbySearchText,
+                    isSearchPresented: $nearbyIsSearchPresented
+                )
             case .radar:
                 ScannerRadarView(store: store)
             }

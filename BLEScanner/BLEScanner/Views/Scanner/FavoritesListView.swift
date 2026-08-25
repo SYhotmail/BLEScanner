@@ -9,10 +9,16 @@ import SwiftUI
 /// `ScannerFeature.State.favoriteSortedDevices`).
 struct FavoritesListView: View {
     let store: StoreOf<ScannerFeature>
-    @State private var searchText = ""
+    @Binding var searchText: String
+    @Binding var isSearchPresented: Bool
 
     var body: some View {
-        SearchableList(items: store.favoriteSortedDevices, matches: SearchMatcher.matches, searchText: $searchText) { device in
+        SearchableList(
+            items: store.favoriteSortedDevices,
+            matches: SearchMatcher.matches,
+            searchText: $searchText,
+            isSearchPresented: $isSearchPresented
+        ) { device in
             ScannerDeviceRow(store: store, device: device)
         } emptyContent: {
             ContentUnavailableView(

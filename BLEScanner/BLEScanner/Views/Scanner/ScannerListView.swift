@@ -5,10 +5,16 @@ import SwiftUI
 
 struct ScannerListView: View {
     let store: StoreOf<ScannerFeature>
-    @State private var searchText = ""
+    @Binding var searchText: String
+    @Binding var isSearchPresented: Bool
 
     var body: some View {
-        SearchableList(items: store.filteredSortedDevices, matches: SearchMatcher.matches, searchText: $searchText) { device in
+        SearchableList(
+            items: store.filteredSortedDevices,
+            matches: SearchMatcher.matches,
+            searchText: $searchText,
+            isSearchPresented: $isSearchPresented
+        ) { device in
             ScannerDeviceRow(store: store, device: device)
         } emptyContent: {
             ContentUnavailableView(
