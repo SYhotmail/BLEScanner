@@ -72,3 +72,19 @@ struct RawAdvertisementDataView: View {
         .onChange(of: device.id) { didCopy = false }
     }
 }
+
+#Preview {
+    RawAdvertisementDataView(
+        device: DiscoveredDevice(
+            identifier: UUID(),
+            name: "Test Beacon",
+            rssi: -65,
+            isConnectable: true,
+            advertisedServiceIdentifiers: [GATTIdentifier(rawValue: "FEAA")],
+            txPowerLevel: -12,
+            manufacturerData: Data([0x4C, 0x00, 0x02, 0x15, 0x00])
+        ),
+        onDismiss: {},
+        onCopy: { _ in }
+    )
+}

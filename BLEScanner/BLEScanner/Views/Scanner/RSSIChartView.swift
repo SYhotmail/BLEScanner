@@ -2,11 +2,21 @@ import BLEKitCore
 import Charts
 import SwiftUI
 
+extension DiscoveredDevice: RSSIChartView.ViewModel {
+    var displayName: String {
+        name ?? identifier.uuidString
+    }
+}
+
 /// Centered card showing a device's accumulated RSSI-over-time samples as a line chart, plus a
 /// CSV export action — the "Chart" counterpart to `RawAdvertisementDataView`, opened from the
 /// same row-level button row.
 struct RSSIChartView: View {
-    let device: DiscoveredDevice
+    protocol ViewModel {
+        var displayName: String { get }
+    }
+    
+    let viewModel: RSSIChartView.ViewModel
     let samples: [RSSISample]
     let onDismiss: () -> Void
 
@@ -16,7 +26,7 @@ struct RSSIChartView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("RSSI Chart")
                         .font(.headline)
-                    Text(device.name ?? device.identifier.uuidString)
+                    Text(viewModel.displayName)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -43,15 +53,16 @@ struct RSSIChartView: View {
                         x: .value("Time", sample.date),
                         y: .value("RSSI", sample.rssi)
                     )
+                    .foregroundStyle(.primary)
                     PointMark(
                         x: .value("Time", sample.date),
                         y: .value("RSSI", sample.rssi)
                     )
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.secondary)
                 }
                 .chartXAxisLabel("Time")
                 .chartYAxisLabel("dBm", position: .top, alignment: .leading)
-                .chartXScale(domain: xDomain, type: .date)
+                .chartXScale(domain: xDomain)
                 .chartYScale(domain: yDomain)
                 .animation(.easeInOut(duration: 0.3), value: samples)
                 .frame(height: 220)
@@ -62,7 +73,7 @@ struct RSSIChartView: View {
 
             ShareLink(
                 item: RSSIChartCSVDocument(csv: RSSISampleCSVExporter.csv(for: samples)),
-                preview: SharePreview("RSSI Chart – \(device.name ?? device.identifier.uuidString)")
+                preview: SharePreview("RSSI Chart – \(viewModel.displayName)")
             ) {
                 Label("Export CSV", systemImage: "square.and.arrow.up")
                     .frame(maxWidth: .infinity)
@@ -104,5 +115,33 @@ struct RSSIChartView: View {
         let lower = Swift.max(minValue, minRSSI - padding)
         let upper = Swift.min(maxValue, maxRSSI + padding)
         return lower < upper ? lower...upper : lower...(lower + 1)
+    }
+}
+
+
+private struct RSSIChartViewFakeVM {
+    let displayName = "Display Name"
+    
+    func samples() -> [RSSISample] {
+        
+        let startDate = Date.now
+
+        return (1...10).map { value in
+            RSSISample(
+                date: startDate.addingTimeInterval(TimeInterval(value)),
+                rssi: -65 + Int.random(in: -8...8)
+            )
+        }
+    }
+}
+
+extension RSSIChartViewFakeVM: RSSIChartView.ViewModel {}
+
+#Preview {
+    @Previewable let viewModel = RSSIChartViewFakeVM()
+    
+    RSSIChartView(viewModel: viewModel,
+                  samples: viewModel.samples()) {
+        
     }
 }

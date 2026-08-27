@@ -49,7 +49,7 @@ struct ScannerListView: View {
                             store.send(.rssiChartDismissed)
                         }
                     RSSIChartView(
-                        device: device,
+                        viewModel: device,
                         samples: store.rssiHistoryByDevice[device.id] ?? []
                     ) {
                         store.send(.rssiChartDismissed)
