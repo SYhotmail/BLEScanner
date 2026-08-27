@@ -6,14 +6,10 @@ import SwiftUI
 /// an iOS bottom sheet. See `AdvertisementDataStructure`'s doc comment: CoreBluetooth never
 /// exposes literal packet bytes, so these rows are reconstructed from already-parsed fields.
 struct RawAdvertisementDataView: View {
-    let device: DiscoveredDevice
+    let structures: [AdvertisementDataStructure]
     let onDismiss: () -> Void
-    let onCopy: (DiscoveredDevice) -> Void
+    let onCopy: () -> Void
     @State private var didCopy = false
-
-    private var structures: [AdvertisementDataStructure] {
-        RawAdvertisementDataBuilder.structures(for: device)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -56,7 +52,7 @@ struct RawAdvertisementDataView: View {
             Divider()
 
             Button {
-                onCopy(device)
+                onCopy()
                 didCopy = true
             } label: {
                 Label(didCopy ? "Copied" : "Copy", systemImage: didCopy ? "checkmark" : "doc.on.doc")
@@ -69,22 +65,35 @@ struct RawAdvertisementDataView: View {
         .frame(maxWidth: 340)
         .background(.background, in: RoundedRectangle(cornerRadius: 14))
         .shadow(radius: 20)
-        .onChange(of: device.id) { didCopy = false }
+    }
+}
+
+extension RawAdvertisementDataView {
+    init(device: DiscoveredDevice,
+         onDismiss: @escaping () -> Void,
+         onCopy: @escaping  () -> Void) {
+        self.init(structures: RawAdvertisementDataBuilder.structures(for: device), onDismiss: onDismiss,
+                  onCopy: onCopy)
     }
 }
 
 #Preview {
-    RawAdvertisementDataView(
-        device: DiscoveredDevice(
-            identifier: UUID(),
-            name: "Test Beacon",
-            rssi: -65,
-            isConnectable: true,
-            advertisedServiceIdentifiers: [GATTIdentifier(rawValue: "FEAA")],
-            txPowerLevel: -12,
-            manufacturerData: Data([0x4C, 0x00, 0x02, 0x15, 0x00])
-        ),
-        onDismiss: {},
-        onCopy: { _ in }
+    let device = DiscoveredDevice(
+        identifier: UUID(),
+        name: "Test Beacon",
+        rssi: -65,
+        isConnectable: true,
+        advertisedServiceIdentifiers: [GATTIdentifier(rawValue: "FEAA")],
+        txPowerLevel: -12,
+        manufacturerData: Data([0x4C, 0x00, 0x02, 0x15, 0x00])
     )
+    RawAdvertisementDataView(
+        device: device,
+        onDismiss: {},
+        onCopy: {}
+    )
+}
+
+#Preview("Empty") {
+    RawAdvertisementDataView(structures: [], onDismiss: {}, onCopy: {})
 }

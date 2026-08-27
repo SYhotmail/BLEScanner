@@ -36,8 +36,9 @@ struct ScannerListView: View {
                     RawAdvertisementDataView(device: device) {
                         store.send(.rawAdvertisementDataDismissed)
                     } onCopy: {
-                        store.send(.rawAdvertisementDataCopyTapped($0.id))
+                        store.send(.rawAdvertisementDataCopyTapped(device.id))
                     }
+                    .id(device.id)
                     .padding(32)
                 }
                 .transition(.opacity)
