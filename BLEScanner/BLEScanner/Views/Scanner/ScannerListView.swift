@@ -41,9 +41,26 @@ struct ScannerListView: View {
                     .padding(32)
                 }
                 .transition(.opacity)
+            } else if let device = store.rssiChartDevice {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            store.send(.rssiChartDismissed)
+                        }
+                    RSSIChartView(
+                        device: device,
+                        samples: store.rssiHistoryByDevice[device.id] ?? []
+                    ) {
+                        store.send(.rssiChartDismissed)
+                    }
+                    .padding(32)
+                }
+                .transition(.opacity)
             }
         }
         .animation(.easeOut(duration: 0.15), value: store.rawAdvertisementDataDevice)
+        .animation(.easeOut(duration: 0.15), value: store.rssiChartDevice)
         .toast(isPresented: store.copyFeedbackDeviceID != nil, message: "Copied to Clipboard")
     }
 }
@@ -107,6 +124,15 @@ struct ScannerDeviceRow: View {
                     .controlSize(.small)
                     .accessibilityIdentifier("device.row.rawDataIndicator.\(deviceId)")
                 }
+                Button {
+                    store.send(.rssiChartTapped(deviceId))
+                } label: {
+                    Text("Chart".uppercased())
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .controlSize(.small)
+                .accessibilityIdentifier("device.row.chartButton.\(deviceId)")
             }
         }
         .overlay(alignment: .topLeading) {

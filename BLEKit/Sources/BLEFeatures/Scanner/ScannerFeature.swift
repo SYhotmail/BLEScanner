@@ -31,6 +31,14 @@ public struct ScannerFeature {
         /// non-connectable row's context menu. Not a `@Presents` child feature since the sheet
         /// is a static read-only display with no reducer logic of its own.
         public var rawAdvertisementDataDevice: DiscoveredDevice?
+        /// Snapshot of the device shown in the "RSSI Chart" overlay, opened from any row's
+        /// Chart button. Not a `@Presents` child feature for the same reason as
+        /// `rawAdvertisementDataDevice` above.
+        public var rssiChartDevice: DiscoveredDevice?
+        /// Timestamped RSSI samples accumulated per device while scanning, powering the RSSI
+        /// chart. In-memory/session-only — cleared on relaunch, not persisted — and capped per
+        /// device at `ScannerFeature.maxRSSISamplesPerDevice` to bound memory during long scans.
+        public var rssiHistoryByDevice: [DiscoveredDevice.ID: [RSSISample]] = [:]
         /// Device whose advertisement text was most recently copied to the pasteboard, kept
         /// around only long enough to drive a "Copied" toast; cleared by `copyFeedbackTimedOut`.
         public var copyFeedbackDeviceID: DiscoveredDevice.ID?
@@ -81,6 +89,8 @@ public struct ScannerFeature {
         case rawAdvertisementDataTapped(DiscoveredDevice.ID)
         case rawAdvertisementDataDismissed
         case rawAdvertisementDataCopyTapped(DiscoveredDevice.ID)
+        case rssiChartTapped(DiscoveredDevice.ID)
+        case rssiChartDismissed
         case copyFeedbackTimedOut(DiscoveredDevice.ID)
         case startRangingIfNeeded
         case stopRanging
@@ -102,6 +112,11 @@ public struct ScannerFeature {
 
     /// How long the "Copied" toast stays up before `copyFeedbackDeviceID` is cleared.
     private static let copyFeedbackDuration: Duration = .seconds(2)
+
+    /// Upper bound on `State.rssiHistoryByDevice` entries per device, so a device left in the
+    /// scan list for a long session doesn't grow its RSSI history unboundedly. Oldest samples
+    /// are dropped first once the cap is reached.
+    private static let maxRSSISamplesPerDevice = 500
 
     /// Continuous (`.periodic`) scan mode's quiet-restart throttle — fixed, unlike Manual
     /// mode's restart interval, which is the user-configurable `settings.scanPeriod`.
@@ -224,11 +239,21 @@ public struct ScannerFeature {
                 return .send(.startRangingIfNeeded)
 
             case let .rawAdvertisementDataTapped(id):
+                state.rssiChartDevice = nil
                 state.rawAdvertisementDataDevice = state.devices[id: id]
                 return .none
 
             case .rawAdvertisementDataDismissed:
                 state.rawAdvertisementDataDevice = nil
+                return .none
+
+            case let .rssiChartTapped(id):
+                state.rawAdvertisementDataDevice = nil
+                state.rssiChartDevice = state.devices[id: id]
+                return .none
+
+            case .rssiChartDismissed:
+                state.rssiChartDevice = nil
                 return .none
 
             case let .rawAdvertisementDataCopyTapped(id):
@@ -424,6 +449,16 @@ public struct ScannerFeature {
         if state.rawAdvertisementDataDevice?.id == device.id {
             state.rawAdvertisementDataDevice = device
         }
+        if state.rssiChartDevice?.id == device.id {
+            state.rssiChartDevice = device
+        }
+
+        var samples = state.rssiHistoryByDevice[device.id, default: []]
+        samples.append(RSSISample(date: advertisement.timestamp, rssi: advertisement.rssi))
+        if samples.count > Self.maxRSSISamplesPerDevice {
+            samples.removeFirst(samples.count - Self.maxRSSISamplesPerDevice)
+        }
+        state.rssiHistoryByDevice[device.id] = samples
 
         let dto = HistoryRecordDTO(
             identifier: device.identifier.uuidString,

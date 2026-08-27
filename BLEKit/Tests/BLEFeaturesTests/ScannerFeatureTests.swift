@@ -570,6 +570,130 @@ struct ScannerFeatureTests {
         await store.send(.rawAdvertisementDataCopyTapped(DiscoveredDeviceFixtures.iBeaconDevice.id))
     }
 
+    @Test("rssiChartTapped shows the device's chart and rssiChartDismissed clears it")
+    func rssiChartTappedShowsDeviceAndDismissedClearsIt() async {
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.rssiChartTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
+            $0.rssiChartDevice = DiscoveredDeviceFixtures.plainSensor
+        }
+        await store.send(.rssiChartDismissed) {
+            $0.rssiChartDevice = nil
+        }
+    }
+
+    @Test("opening the RSSI chart and the raw advertisement data sheet are mutually exclusive")
+    func rssiChartAndRawAdvertisementDataAreMutuallyExclusive() async {
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor, DiscoveredDeviceFixtures.iBeaconDevice]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.rawAdvertisementDataTapped(DiscoveredDeviceFixtures.iBeaconDevice.id)) {
+            $0.rawAdvertisementDataDevice = DiscoveredDeviceFixtures.iBeaconDevice
+        }
+        await store.send(.rssiChartTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
+            $0.rawAdvertisementDataDevice = nil
+            $0.rssiChartDevice = DiscoveredDeviceFixtures.plainSensor
+        }
+        await store.send(.rawAdvertisementDataTapped(DiscoveredDeviceFixtures.iBeaconDevice.id)) {
+            $0.rssiChartDevice = nil
+            $0.rawAdvertisementDataDevice = DiscoveredDeviceFixtures.iBeaconDevice
+        }
+    }
+
+    @Test("each discovered advertisement accumulates an RSSI sample for that device, refreshing an open chart")
+    func discoveredAdvertisementAccumulatesRSSISamples() async {
+        var state = ScannerFeature.State()
+        state.rssiChartDevice = DiscoveredDeviceFixtures.plainSensor
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = FakeBluetoothScannerClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = TestClock()
+        }
+        store.exhaustivity = .off
+
+        let firstAdvertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -55,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil,
+            timestamp: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        await store.send(.scanEvent(.discovered(firstAdvertisement)))
+
+        let secondAdvertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -58,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil,
+            timestamp: Date(timeIntervalSince1970: 1_700_000_005)
+        )
+        await store.send(.scanEvent(.discovered(secondAdvertisement)))
+
+        #expect(store.state.rssiHistoryByDevice[DiscoveredDeviceFixtures.plainSensor.id] == [
+            RSSISample(date: firstAdvertisement.timestamp, rssi: -55),
+            RSSISample(date: secondAdvertisement.timestamp, rssi: -58)
+        ])
+        #expect(store.state.rssiChartDevice?.rssi == -58)
+
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
+    @Test("RSSI history for a device is capped at 500 samples, dropping the oldest first")
+    func rssiHistoryIsCappedAtMaxSamples() async {
+        var state = ScannerFeature.State()
+        state.rssiHistoryByDevice[DiscoveredDeviceFixtures.plainSensor.id] = (0 ..< 500).map {
+            RSSISample(date: Date(timeIntervalSince1970: TimeInterval(1_700_000_000 + $0)), rssi: -$0)
+        }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = FakeBluetoothScannerClient().client
+            $0.history = InMemoryHistoryClient().client
+            $0.continuousClock = TestClock()
+        }
+        store.exhaustivity = .off
+
+        let newestAdvertisement = BLEAdvertisement(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Living Room Sensor",
+            rssi: -999,
+            isConnectable: true,
+            serviceIdentifiers: [],
+            manufacturerData: nil,
+            timestamp: Date(timeIntervalSince1970: 1_700_000_500)
+        )
+        await store.send(.scanEvent(.discovered(newestAdvertisement)))
+
+        let history = store.state.rssiHistoryByDevice[DiscoveredDeviceFixtures.plainSensor.id]
+        #expect(history?.count == 500)
+        // The oldest pre-seeded sample (rssi 0) was dropped; the newest sample is appended.
+        #expect(history?.first?.rssi == -1)
+        #expect(history?.last?.rssi == -999)
+
+        await store.send(.onDisappear)
+        await store.finish()
+    }
+
     @Test("favoriteToggled stars a connectable device and adds it to favoriteSortedDevices")
     func favoriteToggledStarsConnectableDevice() async {
         var device = DiscoveredDeviceFixtures.plainSensor

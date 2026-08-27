@@ -204,6 +204,20 @@ final class BLEScannerUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["E2C56DB5-DFFB-48D2-B060-D0F5A71096E0"].waitForExistence(timeout: 2))
     }
 
+    /// "Chart" sits in the same row `VStack` as "Raw Data" and hits the identical
+    /// Simulator/XCUITest limitation documented on
+    /// `testCopyRawAdvertisementDataButtonShowsOnConnectableRow` above: a valid, on-screen frame
+    /// that's consistently reported non-hittable. `ScannerFeatureTests.
+    /// "rssiChartTapped shows the device's chart and rssiChartDismissed clears it"` already
+    /// covers the tap/dismiss logic itself via `TestStore`; this only asserts the button surfaces.
+    func testChartButtonShowsOnDeviceRow() throws {
+        let app = launchApp()
+
+        XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
+        let chartButton = app.buttons["device.row.chartButton.11111111-1111-1111-1111-111111111111"]
+        XCTAssertTrue(chartButton.waitForExistence(timeout: 5))
+    }
+
     func testDeviceDetailConnectAndReadCharacteristic() throws {
         let app = launchApp()
 
