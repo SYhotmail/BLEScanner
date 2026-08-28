@@ -2,23 +2,32 @@ import BLEKitCore
 import Charts
 import SwiftUI
 
-extension DiscoveredDevice: RSSIChartView.ViewModel {
+extension DiscoveredDevice: RSSIChartViewToDisplay {
     var displayName: String {
         name ?? identifier.uuidString
     }
 }
 
+protocol RSSIChartViewToDisplay {
+    var displayName: String { get }
+}
+
 /// Centered card showing a device's accumulated RSSI-over-time samples as a line chart, plus a
 /// CSV export action — the "Chart" counterpart to `RawAdvertisementDataView`, opened from the
 /// same row-level button row.
-struct RSSIChartView: View {
-    protocol ViewModel {
-        var displayName: String { get }
-    }
+struct RSSIChartView<T: RSSIChartViewToDisplay> : View {
     
-    let viewModel: RSSIChartView.ViewModel
+    let viewModel: T
     let samples: [RSSISample]
     let onDismiss: () -> Void
+
+    /// Committed horizontal zoom. `1` fits every sample; larger values zoom the time axis in.
+    /// Combined with the live pinch delta (`pinchScale`) to derive the visible time window.
+    @State private var zoomFactor: CGFloat = 1
+    @GestureState private var pinchScale: CGFloat = 1
+
+    /// Smallest time window the user can zoom into, so a fully-pinched chart still shows context.
+    private let minVisibleDuration: TimeInterval = 2
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -64,8 +73,28 @@ struct RSSIChartView: View {
                 .chartYAxisLabel("dBm", position: .top, alignment: .leading)
                 .chartXScale(domain: xDomain)
                 .chartYScale(domain: yDomain)
+                .chartScrollableAxes(.horizontal)
+                .chartXVisibleDomain(length: visibleDuration)
                 .animation(.easeInOut(duration: 0.3), value: samples)
                 .frame(height: 220)
+                .contentShape(Rectangle())
+                .gesture(zoomGesture)
+                .overlay(alignment: .topTrailing) {
+                    if isZoomed {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { zoomFactor = 1 }
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption)
+                                .padding(6)
+                                .background(.thinMaterial, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Reset zoom")
+                        .accessibilityIdentifier("rssiChart.resetZoom")
+                        .padding(4)
+                    }
+                }
                 .accessibilityIdentifier("rssiChart.plot")
             }
 
@@ -85,6 +114,44 @@ struct RSSIChartView: View {
         .frame(maxWidth: 340)
         .background(.background, in: RoundedRectangle(cornerRadius: 14))
         .shadow(radius: 20)
+    }
+
+    /// Full width of the plotted time range. The chart stays scrollable across this whole span
+    /// while `visibleDuration` windows it.
+    private var totalDuration: TimeInterval {
+        let range = xDomain
+        return Swift.max(range.upperBound.timeIntervalSince(range.lowerBound), minVisibleDuration)
+    }
+
+    /// Live zoom = committed zoom times the in-flight pinch delta, never below "fit all".
+    private var effectiveZoom: CGFloat {
+        Swift.max(1, zoomFactor * pinchScale)
+    }
+
+    /// Largest zoom that still leaves `minVisibleDuration` of context visible.
+    private var maxZoom: CGFloat {
+        Swift.max(1, CGFloat(totalDuration / minVisibleDuration))
+    }
+
+    private var isZoomed: Bool {
+        effectiveZoom > 1.01
+    }
+
+    /// Visible time window: the full span divided by the clamped zoom. Shrinks as the user
+    /// pinches in; `.chartScrollableAxes(.horizontal)` then lets them pan the remainder.
+    private var visibleDuration: TimeInterval {
+        totalDuration / Double(Swift.min(effectiveZoom, maxZoom))
+    }
+
+    /// Pinch-to-zoom on the time axis. The chart's own scroll view handles panning.
+    private var zoomGesture: some Gesture {
+        MagnifyGesture()
+            .updating($pinchScale) { value, state, _ in
+                state = value.magnification
+            }
+            .onEnded { value in
+                zoomFactor = Swift.min(Swift.max(zoomFactor * value.magnification, 1), maxZoom)
+            }
     }
 
     /// Zooms the time axis to the current samples' range (with a small edge margin) so the plot
@@ -126,7 +193,7 @@ private struct RSSIChartViewFakeVM {
         
         let startDate = Date.now
 
-        return (1...10).map { value in
+        return (1...40).map { value in
             RSSISample(
                 date: startDate.addingTimeInterval(TimeInterval(value)),
                 rssi: -65 + Int.random(in: -8...8)
@@ -135,7 +202,7 @@ private struct RSSIChartViewFakeVM {
     }
 }
 
-extension RSSIChartViewFakeVM: RSSIChartView.ViewModel {}
+extension RSSIChartViewFakeVM: RSSIChartViewToDisplay {}
 
 #Preview {
     @Previewable let viewModel = RSSIChartViewFakeVM()
