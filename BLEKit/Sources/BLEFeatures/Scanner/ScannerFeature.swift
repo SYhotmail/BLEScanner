@@ -105,7 +105,6 @@ public struct ScannerFeature {
         case scan
         case ranging
         case restart
-        case recomputeDebounce
         case recompute
         case copyFeedback
     }
@@ -121,11 +120,6 @@ public struct ScannerFeature {
     /// Continuous (`.periodic`) scan mode's quiet-restart throttle — fixed, unlike Manual
     /// mode's restart interval, which is the user-configurable `settings.scanPeriod`.
     private static let continuousScanRestartThrottle: TimeInterval = 5
-
-    /// How long the scan stream must be quiet before the filtered/sorted list is rebuilt from
-    /// a burst of advertisements. Keeps rapid-fire RSSI updates for several devices from
-    /// re-sorting the list on every single one.
-    private static let recomputeDebounceInterval: Duration = .milliseconds(300)
 
     @Dependency(\.bluetoothScanner) var bluetoothScanner
     @Dependency(\.beaconRanging) var beaconRanging
@@ -354,7 +348,7 @@ public struct ScannerFeature {
             .run { _ in bluetoothScanner.stopScanning() },
             .cancel(id: CancelID.scan),
             .cancel(id: CancelID.restart),
-            .cancel(id: CancelID.recomputeDebounce)
+            .cancel(id: CancelID.recompute)
         )
     }
 
@@ -400,19 +394,6 @@ public struct ScannerFeature {
             },
             restartEffect(options)
         )
-    }
-
-    /// Rebuilds the filtered/sorted list once the scan stream has been quiet for
-    /// `recomputeDebounceInterval`. Cancelled and restarted (`cancelInFlight: true`) by every
-    /// call site, so a burst of advertisements collapses into a single recompute after the
-    /// burst ends rather than one recompute per advertisement.
-    private func recomputeDebounceEffect() -> Effect<Action> {
-        let clock = clock
-        return .run { send in
-            try? await clock.sleep(for: Self.recomputeDebounceInterval)
-            await send(.recomputeFilteredDevices)
-        }
-        .cancellable(id: CancelID.recomputeDebounce, cancelInFlight: true)
     }
 
     private func upsert(advertisement: BLEAdvertisement, into state: inout State) -> Effect<Action> {
@@ -473,7 +454,7 @@ public struct ScannerFeature {
         return .merge(
             .send(.history(.recordUpserted(dto))),
             .run { _ in try? await historyClient.upsert(dto) },
-            recomputeDebounceEffect(),
+            recomputeFilteredSortedDevicesEffect(state: state),
             restartEffect(scanOptions(for: state))
         )
     }

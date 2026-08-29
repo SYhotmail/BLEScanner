@@ -97,8 +97,8 @@ struct ScannerFeatureTests {
         await store.finish()
     }
 
-    @Test("a burst of advertisements is debounced into a single recompute once the stream is quiet")
-    func advertisementRecomputeIsDebounced() async {
+    @Test("a discovered advertisement immediately rebuilds the filtered/sorted list, no debounce")
+    func advertisementImmediatelyUpdatesFilteredSortedDevices() async {
         let fakeScanner = FakeBluetoothScannerClient()
         let clock = TestClock()
         var state = ScannerFeature.State()
@@ -127,14 +127,7 @@ struct ScannerFeatureTests {
         fakeScanner.send(.discovered(advertisement))
         await store.skipReceivedActions()
 
-        // Still within the debounce window: the underlying device data updated, but the
-        // filtered/sorted snapshot the UI reads hasn't been rebuilt yet.
         #expect(store.state.devices[id: advertisement.identifier]?.rssi == -55)
-        #expect(store.state.filteredSortedDevices.isEmpty)
-
-        await clock.advance(by: .milliseconds(300))
-        await store.skipReceivedActions()
-
         #expect(store.state.filteredSortedDevices.map(\.id) == [advertisement.identifier])
 
         fakeScanner.finish()
