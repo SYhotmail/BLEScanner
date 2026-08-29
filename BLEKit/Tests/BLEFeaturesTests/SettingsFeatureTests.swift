@@ -64,6 +64,19 @@ struct SettingsFeatureTests {
         }
     }
 
+    @Test("changing the sort order updates shared settings")
+    func changingSortOrderUpdatesSettings() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.sortOrderChanged(.appearance)) {
+            $0.$settings.withLock { $0.sortOrder = .appearance }
+        }
+    }
+
     @Test("tapping and dismissing the scan period picker toggles its presentation")
     func scanPeriodPickerPresentationToggles() async {
         let store = TestStore(initialState: SettingsFeature.State()) {

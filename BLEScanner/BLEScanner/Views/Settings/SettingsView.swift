@@ -38,6 +38,21 @@ struct SettingsView: View {
             }
 
             Section {
+                Picker("Sort By", selection: Binding(
+                    get: { store.settings.sortOrder },
+                    set: { store.send(.sortOrderChanged($0)) }
+                )) {
+                    Text("Signal Strength").tag(ScanSortOrder.rssi)
+                    Text("Discovery Order").tag(ScanSortOrder.appearance)
+                }
+                .accessibilityIdentifier("settings.sortOrder.picker")
+            } header: {
+                Text("Nearby List")
+            } footer: {
+                Text("Signal Strength keeps the strongest devices at the top. Discovery Order lists devices in the order they were first seen, so rows don't jump around as signal strength changes.")
+            }
+
+            Section {
                 Toggle("Enhanced Beacon Ranging", isOn: Binding(
                     get: { store.settings.isEnhancedRangingEnabled },
                     set: { store.send(.enhancedRangingToggled($0)) }

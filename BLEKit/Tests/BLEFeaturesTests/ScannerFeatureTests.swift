@@ -434,6 +434,52 @@ struct ScannerFeatureTests {
         ])
     }
 
+    @Test("sortOrderChanged persists the choice and re-sorts the list by discovery order")
+    func sortOrderChangedResortsList() async {
+        let early = DiscoveredDevice(
+            identifier: DiscoveredDeviceFixtures.weakSignalDevice.identifier,
+            name: "Early",
+            rssi: -88,
+            firstSeenDate: Date(timeIntervalSinceReferenceDate: 0)
+        )
+        let late = DiscoveredDevice(
+            identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+            name: "Late",
+            rssi: -55,
+            firstSeenDate: Date(timeIntervalSinceReferenceDate: 100)
+        )
+        var state = ScannerFeature.State()
+        state.devices = [late, early]
+        Self.recomputeFilteredSortedDevices(state: &state)
+        #expect(state.filteredSortedDevices.map(\.id) == [late.id, early.id])
+
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+        store.exhaustivity = .off
+
+        await store.send(.sortOrderChanged(.appearance)) {
+            $0.settings.sortOrder = .appearance
+        }
+        await store.receive(\.filteredSortedDevicesComputed) {
+            $0.filteredSortedDevices = [early, late]
+        }
+        #expect(store.state.settings.sortOrder == .appearance)
+    }
+
+    @Test("sortOrderChanged to the current order is a no-op")
+    func sortOrderChangedNoOpWhenUnchanged() async {
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+        }
+
+        await store.send(.sortOrderChanged(.rssi))
+    }
+
     @Test("changing the shared filter criteria recomputes the cached filtered/sorted devices")
     func recomputeFilteredDevicesReflectsFilterCriteriaChange() async {
         var state = ScannerFeature.State()

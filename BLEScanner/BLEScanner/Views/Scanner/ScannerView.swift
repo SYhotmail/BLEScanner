@@ -60,6 +60,23 @@ struct ScannerView: View {
                     .accessibilityLabel(store.displayMode == .list ? "Show Radar" : "Show List")
                 }
             }
+            if store.tab == .nearby || store.tab == .favorites {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Picker("Sort By", selection: Binding(
+                            get: { store.settings.sortOrder },
+                            set: { store.send(.sortOrderChanged($0)) }
+                        )) {
+                            Label("Signal Strength", systemImage: "cellularbars").tag(ScanSortOrder.rssi)
+                            Label("Discovery Order", systemImage: "clock").tag(ScanSortOrder.appearance)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                    }
+                    .accessibilityIdentifier("scanner.sortMenu")
+                    .accessibilityLabel("Sort Order")
+                }
+            }
         }
         .onAppear { store.send(.onAppear) }
         .onDisappear { store.send(.onDisappear) }

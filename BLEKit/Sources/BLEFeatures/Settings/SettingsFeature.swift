@@ -22,6 +22,7 @@ public struct SettingsFeature {
         case enhancedRangingToggled(Bool)
         case scanModeChanged(ScanMode)
         case scanPeriodChanged(TimeInterval)
+        case sortOrderChanged(ScanSortOrder)
         case scanPeriodPickerTapped
         case scanPeriodPickerDismissed
         case authorizationEvent(BeaconRangingEvent)
@@ -62,6 +63,10 @@ public struct SettingsFeature {
 
             case let .scanPeriodChanged(period):
                 state.$settings.withLock { $0.scanPeriod = period }
+                return .none
+
+            case let .sortOrderChanged(order):
+                state.$settings.withLock { $0.sortOrder = order }
                 return .none
 
             case .scanPeriodPickerTapped:

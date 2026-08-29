@@ -56,8 +56,9 @@ public struct ScannerFeature {
         /// resulting assignment happens on `main`, via `.filteredSortedDevicesComputed`.
         public internal(set) var filteredSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
 
-        /// Currently-visible devices the user has starred, sorted by RSSI. Recomputed alongside
-        /// `filteredSortedDevices` — a device only appears here while it's also present in
+        /// Currently-visible devices the user has starred, sorted by the same `settings.sortOrder`
+        /// as `filteredSortedDevices` and recomputed alongside it — a device only appears here
+        /// while it's also present in
         /// `devices` (i.e. currently in range), the same "kept" semantics as `filteredSortedDevices`.
         /// `favoriteDeviceIdentifiers` itself is what actually persists the starring across scans.
         public internal(set) var favoriteSortedDevices: IdentifiedArrayOf<DiscoveredDevice> = []
@@ -68,9 +69,9 @@ public struct ScannerFeature {
 
         mutating func recomputeFilteredSortedDevices() {
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
-            filteredSortedDevices = IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
+            filteredSortedDevices = IdentifiedArray(uniqueElements: DeviceSorter.sorted(filtered, by: settings.sortOrder))
             let favorites = devices.filter { favoriteDeviceIdentifiers.contains($0.id) }
-            favoriteSortedDevices = IdentifiedArray(uniqueElements: favorites.sorted { $0.rssi > $1.rssi })
+            favoriteSortedDevices = IdentifiedArray(uniqueElements: DeviceSorter.sorted(favorites, by: settings.sortOrder))
         }
     }
 
@@ -80,6 +81,7 @@ public struct ScannerFeature {
         case scanToggleTapped
         case tabChanged(ScanTab)
         case displayModeToggled
+        case sortOrderChanged(ScanSortOrder)
         case scanEvent(BLEScanEvent)
         case beaconRangingEvent(BeaconRangingEvent)
         case rowTapped(DiscoveredDevice.ID)
@@ -137,23 +139,25 @@ public struct ScannerFeature {
     private func recomputeFilteredSortedDevicesEffect(
         devices: IdentifiedArrayOf<DiscoveredDevice>,
         filterCriteria: FilterCriteria,
-        favoriteDeviceIdentifiers: Set<UUID>
+        favoriteDeviceIdentifiers: Set<UUID>,
+        sortOrder: ScanSortOrder
     ) -> Effect<Action> {
         .run { send in
             let filtered = devices.filter { DeviceFilter.matches($0, criteria: filterCriteria) }
-            let filteredSorted = IdentifiedArray(uniqueElements: filtered.sorted { $0.rssi > $1.rssi })
+            let filteredSorted = IdentifiedArray(uniqueElements: DeviceSorter.sorted(filtered, by: sortOrder))
             let favorites = devices.filter { favoriteDeviceIdentifiers.contains($0.id) }
-            let favoritesSorted = IdentifiedArray(uniqueElements: favorites.sorted { $0.rssi > $1.rssi })
+            let favoritesSorted = IdentifiedArray(uniqueElements: DeviceSorter.sorted(favorites, by: sortOrder))
             await send(.filteredSortedDevicesComputed(filtered: filteredSorted, favorites: favoritesSorted))
         }
         .cancellable(id: CancelID.recompute, cancelInFlight: true)
     }
-    
+
     private func recomputeFilteredSortedDevicesEffect(state: State) -> Effect<Action> {
         recomputeFilteredSortedDevicesEffect(
             devices: state.devices,
             filterCriteria: state.filterCriteria,
-            favoriteDeviceIdentifiers: state.favoriteDeviceIdentifiers
+            favoriteDeviceIdentifiers: state.favoriteDeviceIdentifiers,
+            sortOrder: state.settings.sortOrder
         )
     }
 
@@ -189,6 +193,11 @@ public struct ScannerFeature {
             case .displayModeToggled:
                 state.displayMode = state.displayMode == .list ? .radar : .list
                 return .none
+
+            case let .sortOrderChanged(order):
+                guard state.settings.sortOrder != order else { return .none }
+                state.$settings.withLock { $0.sortOrder = order }
+                return recomputeFilteredSortedDevicesEffect(state: state)
 
             case let .scanEvent(.stateChanged(bluetoothState)):
                 state.bluetoothState = bluetoothState
