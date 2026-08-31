@@ -218,25 +218,41 @@ final class BLEScannerUITests: XCTestCase {
         XCTAssertTrue(chartButton.waitForExistence(timeout: 5))
     }
 
+    /// The one UI test that still drives a full interactive flow end to end (row -> connect ->
+    /// discover -> expand characteristic -> read -> decoded value). Every `.tap()` here goes
+    /// through `tapCenter`: on this Simulator/Xcode combination XCUITest can't compute a hit
+    /// point for SwiftUI `List`-row buttons (and buttons in a `List` `Section`), reporting a
+    /// valid on-screen frame as `{-1, -1}` "not hittable" — the same limitation documented on
+    /// `testChartButtonShowsOnDeviceRow` and the History swipe-action test. A coordinate tap on
+    /// the frame's centre performs the real interaction without the hittability precheck.
     func testDeviceDetailConnectAndReadCharacteristic() throws {
         let app = launchApp()
 
         XCTAssertTrue(app.navigationBars["Scanner"].waitForExistence(timeout: 5))
         let row = app.buttons["device.row.\(UUID(uuidString: "11111111-1111-1111-1111-111111111111")!.uuidString)"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
+        tapCenter(row)
 
         let connectButton = app.buttons["deviceDetail.connectButton"]
         XCTAssertTrue(connectButton.waitForExistence(timeout: 5))
-        connectButton.tap()
+        tapCenter(connectButton)
 
         XCTAssertTrue(app.staticTexts["Battery Service"].waitForExistence(timeout: 5))
-        app.staticTexts["Battery Level"].tap()
+        let batteryLevel = app.staticTexts["Battery Level"]
+        XCTAssertTrue(batteryLevel.waitForExistence(timeout: 5))
+        tapCenter(batteryLevel)
 
         let readButton = app.buttons["characteristic.2A19.readButton"]
         XCTAssertTrue(readButton.waitForExistence(timeout: 5))
-        readButton.tap()
+        tapCenter(readButton)
 
         XCTAssertTrue(app.staticTexts["Hex: 55"].waitForExistence(timeout: 5))
+    }
+
+    /// Taps the geometric centre of an element via `XCUICoordinate`, bypassing XCUITest's
+    /// hittability precheck. Needed because SwiftUI `List` rows/sections in this Simulator
+    /// environment report otherwise-valid frames as non-hittable (`{-1, -1}` hit point).
+    private func tapCenter(_ element: XCUIElement) {
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 }
