@@ -55,6 +55,11 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
                 self.continuation?.yield(.operationFailed(.characteristicNotFound))
                 return
             }
+            
+            guard characteristic.properties.contains(.read) else {
+                self.continuation?.yield(.operationFailed(.cannotBeRead))
+                return
+            }
             self.peripheral.readValue(for: characteristic)
         }
     }

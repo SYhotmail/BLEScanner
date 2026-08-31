@@ -52,6 +52,7 @@ public enum BLEHardwareError: Error, Sendable, Equatable {
     case peripheralNotFound
     case serviceNotFound
     case characteristicNotFound
+    case cannotBeRead
     case operationFailed(String)
 }
 
