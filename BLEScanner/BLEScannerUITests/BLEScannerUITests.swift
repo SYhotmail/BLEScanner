@@ -247,6 +247,9 @@ final class BLEScannerUITests: XCTestCase {
         tapCenter(readButton)
 
         XCTAssertTrue(app.staticTexts["Hex: 55"].waitForExistence(timeout: 5))
+
+        // The expanded characteristic also lists its discovered descriptors by SIG name.
+        XCTAssertTrue(app.staticTexts["Client Characteristic Configuration"].waitForExistence(timeout: 5))
     }
 
     /// Taps the geometric centre of an element via `XCUICoordinate`, bypassing XCUITest's

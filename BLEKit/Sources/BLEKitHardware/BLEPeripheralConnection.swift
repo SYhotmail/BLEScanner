@@ -27,6 +27,11 @@ public protocol BLEPeripheralConnection: AnyObject, Sendable {
     func disconnect()
     func discoverServices()
     func readValue(serviceIdentifier: GATTIdentifier, characteristicIdentifier: GATTIdentifier)
+    func readDescriptor(
+        serviceIdentifier: GATTIdentifier,
+        characteristicIdentifier: GATTIdentifier,
+        descriptorIdentifier: GATTIdentifier
+    )
     func writeValue(
         _ data: Data,
         serviceIdentifier: GATTIdentifier,

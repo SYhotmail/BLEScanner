@@ -150,6 +150,52 @@ struct DeviceDetailFeatureTests {
         await store.finish()
     }
 
+    @Test("discovered descriptors survive a later characteristic value update that omits them")
+    func descriptorsSurviveCharacteristicUpdate() async {
+        let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+        }
+
+        await store.send(.connectTapped) {
+            $0.connectionStatus = .connecting
+        }
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent) {
+            $0.connectionStatus = .connected
+        }
+        fakeConnection.send(.servicesDiscovered(GATTFixtures.allServices))
+        await store.receive(\.connectionEvent) {
+            $0.services = IdentifiedArray(uniqueElements: GATTFixtures.allServices)
+        }
+
+        // The fixture's Battery Level characteristic carries a CCCD descriptor.
+        #expect(GATTFixtures.batteryLevelCharacteristic.descriptors.isEmpty == false)
+
+        var updatedCharacteristic = GATTFixtures.batteryLevelCharacteristic
+        updatedCharacteristic.latestValue = Data([0x2A])
+        updatedCharacteristic.descriptors = []
+
+        await store.send(.readTapped(
+            service: GATTFixtures.batteryService.identifier,
+            characteristic: updatedCharacteristic.identifier
+        ))
+        fakeConnection.send(.characteristicUpdated(
+            serviceIdentifier: GATTFixtures.batteryService.identifier,
+            characteristic: updatedCharacteristic
+        ))
+        await store.receive(\.connectionEvent) {
+            var expected = updatedCharacteristic
+            expected.descriptors = GATTFixtures.batteryLevelCharacteristic.descriptors
+            $0.services[id: GATTFixtures.batteryService.identifier]?.characteristics[0] = expected
+        }
+
+        fakeConnection.finish()
+        await store.finish()
+    }
+
     @Test("writing with valid hex input clears any prior error")
     func writingValidHexClearsError() async {
         let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)

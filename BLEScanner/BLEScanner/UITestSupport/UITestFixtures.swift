@@ -34,7 +34,10 @@ enum UITestFixtures {
     static let batteryCharacteristic = GATTCharacteristic(
         identifier: GATTIdentifier(rawValue: "2A19"),
         name: "Battery Level",
-        properties: [.read, .notify]
+        properties: [.read, .notify],
+        descriptors: [
+            GATTDescriptor(identifier: GATTIdentifier(rawValue: "2902")), // Client Characteristic Configuration
+        ]
     )
 
     static let txPowerLevelCharacteristic = GATTCharacteristic(

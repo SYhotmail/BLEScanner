@@ -6,14 +6,20 @@ public enum GATTFixtures {
         identifier: GATTIdentifier(rawValue: "2A19"),
         name: "Battery Level",
         properties: [.read, .notify],
-        latestValue: Data([0x64])
+        latestValue: Data([0x64]),
+        descriptors: [
+            GATTDescriptor(identifier: GATTIdentifier(rawValue: "2902")), // Client Characteristic Configuration
+        ]
     )
 
     public static let deviceNameCharacteristic = GATTCharacteristic(
         identifier: GATTIdentifier(rawValue: "2A00"),
         name: "Device Name",
         properties: [.read, .write],
-        latestValue: Data("BLEScanner Fixture".utf8)
+        latestValue: Data("BLEScanner Fixture".utf8),
+        descriptors: [
+            GATTDescriptor(identifier: GATTIdentifier(rawValue: "2901")), // Characteristic User Description
+        ]
     )
 
     public static let txPowerLevelCharacteristic = GATTCharacteristic(

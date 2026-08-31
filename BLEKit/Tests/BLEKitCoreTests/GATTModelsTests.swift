@@ -39,4 +39,20 @@ struct GATTModelsTests {
         let vendor = GATTCharacteristic(identifier: vendorIdentifier, properties: .notify)
         #expect(vendor.displayName == vendorIdentifier.rawValue)
     }
+
+    @Test("GATTCharacteristic descriptors default to empty")
+    func characteristicDescriptorsDefaultEmpty() {
+        let characteristic = GATTCharacteristic(identifier: GATTIdentifier(rawValue: "2A19"), properties: .read)
+        #expect(characteristic.descriptors.isEmpty)
+    }
+
+    @Test("GATTDescriptor.displayName resolves the SIG name, else the raw UUID")
+    func descriptorDisplayName() {
+        let cccd = GATTDescriptor(identifier: GATTIdentifier(rawValue: "2902"))
+        #expect(cccd.displayName == "Client Characteristic Configuration")
+
+        let vendorIdentifier = GATTIdentifier(rawValue: "6E400004-B5A3-F393-E0A9-E50E24DCCA9E")
+        let vendor = GATTDescriptor(identifier: vendorIdentifier)
+        #expect(vendor.displayName == vendorIdentifier.rawValue)
+    }
 }

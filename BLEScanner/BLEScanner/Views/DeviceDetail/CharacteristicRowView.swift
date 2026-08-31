@@ -39,6 +39,9 @@ struct CharacteristicRowView: View {
             if characteristic.properties.supportsSubscription {
                 badge("N")
             }
+            if !characteristic.descriptors.isEmpty {
+                badge("D")
+            }
         }
     }
 

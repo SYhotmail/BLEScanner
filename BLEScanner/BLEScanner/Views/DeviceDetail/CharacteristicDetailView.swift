@@ -19,8 +19,31 @@ struct CharacteristicDetailView: View {
             if characteristic.properties.contains(.write) || characteristic.properties.contains(.writeWithoutResponse) {
                 writeSection
             }
+            if !characteristic.descriptors.isEmpty {
+                descriptorsSection
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    private var descriptorsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Descriptors")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            ForEach(characteristic.descriptors) { descriptor in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(descriptor.displayName)
+                        .font(.caption)
+                    if descriptor.displayName != descriptor.identifier.rawValue {
+                        Text(descriptor.identifier.rawValue)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("characteristic.\(characteristic.identifier.rawValue).descriptor.\(descriptor.identifier.rawValue)")
+            }
+        }
     }
 
     private var readSection: some View {

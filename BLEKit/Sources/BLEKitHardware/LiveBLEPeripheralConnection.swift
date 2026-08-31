@@ -147,6 +147,21 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
             continuation?.yield(.operationFailed(.operationFailed(error.localizedDescription)))
             return
         }
+        for characteristic in service.characteristics ?? [] {
+            peripheral.discoverDescriptors(for: characteristic)
+        }
+        emitServiceSnapshotIfComplete()
+    }
+
+    public func peripheral(
+        _ peripheral: CBPeripheral,
+        didDiscoverDescriptorsFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        if let error {
+            continuation?.yield(.operationFailed(.operationFailed(error.localizedDescription)))
+            return
+        }
         emitServiceSnapshotIfComplete()
     }
 
@@ -185,11 +200,14 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
     private func emitServiceSnapshotIfComplete() {
         guard let services = peripheral.services else { return }
         // Every top-level service must have had both its characteristics and its included
-        // services discovered, and every included service must have had its characteristics
-        // discovered, before the snapshot is complete.
+        // services discovered, every included service must have had its characteristics
+        // discovered, and every characteristic must have had its descriptors discovered,
+        // before the snapshot is complete.
         guard services.allSatisfy({ $0.characteristics != nil && $0.includedServices != nil }) else { return }
         let includedServices = services.flatMap { $0.includedServices ?? [] }
         guard includedServices.allSatisfy({ $0.characteristics != nil }) else { return }
+        let allCharacteristics = (services + includedServices).flatMap { $0.characteristics ?? [] }
+        guard allCharacteristics.allSatisfy({ $0.descriptors != nil }) else { return }
 
         let gattServices = services.map { service in
             GATTService(
@@ -211,7 +229,10 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
             identifier: GATTIdentifier(rawValue: characteristic.uuid.uuidString),
             properties: GATTCharacteristicProperties(cbProperties: characteristic.properties),
             latestValue: characteristic.value,
-            isNotifying: characteristic.isNotifying
+            isNotifying: characteristic.isNotifying,
+            descriptors: (characteristic.descriptors ?? []).map { descriptor in
+                GATTDescriptor(identifier: GATTIdentifier(rawValue: descriptor.uuid.uuidString))
+            }
         )
     }
 }

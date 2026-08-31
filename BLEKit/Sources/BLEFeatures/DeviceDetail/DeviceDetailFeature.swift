@@ -197,7 +197,13 @@ public struct DeviceDetailFeature {
 
     private static func merge(_ characteristic: GATTCharacteristic, into characteristics: inout [GATTCharacteristic]) {
         if let index = characteristics.firstIndex(where: { $0.id == characteristic.id }) {
-            characteristics[index] = characteristic
+            var merged = characteristic
+            // Read/notify updates carry whatever descriptors CoreBluetooth still has attached;
+            // if an update arrives without them, keep the ones discovery already found.
+            if merged.descriptors.isEmpty {
+                merged.descriptors = characteristics[index].descriptors
+            }
+            characteristics[index] = merged
         } else {
             characteristics.append(characteristic)
         }

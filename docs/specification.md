@@ -47,7 +47,8 @@ Two complementary mechanisms, combined:
 Selecting a device opens its detail screen:
 
 - **Connection lifecycle**: Connect / Disconnect action with visible status (Disconnected, Connecting, Connected, Failed).
-- **GATT tree**: once connected, services and their characteristics are discovered and displayed as an expandable tree. Each characteristic shows capability badges — Read, Write, Notify (Notify also covers Indicate; both are exposed as a single "subscribe" affordance, matching CoreBluetooth's unified `setNotifyValue` API).
+- **GATT tree**: once connected, services and their characteristics are discovered and displayed as an expandable tree. Each characteristic shows capability badges — Read, Write, Notify (Notify also covers Indicate; both are exposed as a single "subscribe" affordance, matching CoreBluetooth's unified `setNotifyValue` API), and a Descriptors badge when the characteristic has any.
+- **Descriptors**: each characteristic's descriptors are discovered and listed by name (resolved from the Bluetooth SIG assigned numbers, e.g. `2902` → "Client Characteristic Configuration") with the raw UUID. Descriptor values are not read or written — enabling Notify writes the CCCD implicitly via `setNotifyValue`.
 
 ## 7. Characteristic interaction
 
@@ -102,8 +103,8 @@ Platform constraints and deliberate deviations from the Android reference app:
 - BLE scanning with List and Radar (proximity) views.
 - iBeacon detection (always-on parsing + opt-in enhanced ranging).
 - Persisted device-sighting History.
-- Connect/disconnect, GATT service/characteristic discovery.
-- Read, Write (Text/Hex), Notify per characteristic.
+- Connect/disconnect, GATT service/characteristic/descriptor discovery.
+- Read, Write (Text/Hex), Notify per characteristic; descriptor listing (read-only).
 - Filtering by Name, Identifier, minimum RSSI.
 - Settings: Enhanced Ranging toggle, Known Beacons management.
 - Adaptive NavigationSplitView UI for iPhone and iPad.
