@@ -16,7 +16,13 @@ public enum SearchMatcher {
     }
 
     public static func matches(_ device: DiscoveredDevice, query: String) -> Bool {
-        matches(name: device.name, identifier: device.identifier.uuidString, query: query)
+        if matches(name: device.name, identifier: device.identifier.uuidString, query: query) {
+            return true
+        }
+        guard !query.isEmpty else { return true }
+        return device.advertisedServiceIdentifiers.contains { identifier in
+            GATTAssignedNumbers.serviceName(for: identifier)?.range(of: query, options: .caseInsensitive) != nil
+        }
     }
 
     public static func matches(_ record: HistoryRecordDTO, query: String) -> Bool {

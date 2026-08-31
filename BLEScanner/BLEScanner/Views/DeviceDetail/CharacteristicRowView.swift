@@ -13,7 +13,14 @@ struct CharacteristicRowView: View {
             CharacteristicDetailView(store: store, serviceIdentifier: serviceIdentifier, characteristic: characteristic)
         } label: {
             HStack {
-                Text(characteristic.name ?? characteristic.identifier.rawValue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(characteristic.displayName)
+                    if characteristic.displayName != characteristic.identifier.rawValue {
+                        Text(characteristic.identifier.rawValue)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Spacer()
                 capabilityBadges
             }

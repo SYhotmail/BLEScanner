@@ -35,6 +35,12 @@ public struct GATTCharacteristic: Identifiable, Equatable, Sendable {
         self.latestValue = latestValue
         self.isNotifying = isNotifying
     }
+
+    /// Label for display: an explicitly discovered `name`, else the Bluetooth SIG assigned
+    /// characteristic name for this UUID, else the raw UUID string.
+    public var displayName: String {
+        name ?? GATTAssignedNumbers.characteristicName(for: identifier) ?? identifier.rawValue
+    }
 }
 
 public struct GATTService: Identifiable, Equatable, Sendable {
@@ -47,5 +53,11 @@ public struct GATTService: Identifiable, Equatable, Sendable {
         self.identifier = identifier
         self.name = name
         self.characteristics = characteristics
+    }
+
+    /// Label for display: an explicitly discovered `name`, else the Bluetooth SIG assigned
+    /// service name for this UUID, else the raw UUID string.
+    public var displayName: String {
+        name ?? GATTAssignedNumbers.serviceName(for: identifier) ?? identifier.rawValue
     }
 }

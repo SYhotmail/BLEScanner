@@ -37,6 +37,20 @@ struct SearchMatcherTests {
         #expect(!SearchMatcher.matches(device, query: "kitchen"))
     }
 
+    @Test("matches a DiscoveredDevice by an advertised service's Bluetooth SIG name")
+    func matchesDiscoveredDeviceByServiceName() {
+        let identifier = UUID(uuidString: "12345678-ABCD-4EF0-9012-345678ABCDEF")!
+        let device = DiscoveredDevice(
+            identifier: identifier,
+            name: "Sensor 42",
+            rssi: -60,
+            advertisedServiceIdentifiers: [GATTIdentifier(rawValue: "180D")]
+        )
+        #expect(SearchMatcher.matches(device, query: "heart"))
+        #expect(SearchMatcher.matches(device, query: "Heart Rate"))
+        #expect(!SearchMatcher.matches(device, query: "glucose"))
+    }
+
     @Test("matches a HistoryRecordDTO by name or identifier")
     func matchesHistoryRecord() {
         let record = HistoryRecordDTO(identifier: "12345678-ABCD-4EF0-9012-345678ABCDEF", name: "Garage Sensor", lastRSSI: -60, lastSeenDate: .now)

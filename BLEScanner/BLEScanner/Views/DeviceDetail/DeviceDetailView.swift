@@ -49,7 +49,7 @@ struct DeviceDetailView: View {
             }
 
             ForEach(store.services) { service in
-                Section(service.name ?? service.identifier.rawValue) {
+                Section(service.displayName) {
                     ForEach(service.characteristics) { characteristic in
                         CharacteristicRowView(
                             store: store,
