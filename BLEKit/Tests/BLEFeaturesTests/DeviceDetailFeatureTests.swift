@@ -108,6 +108,48 @@ struct DeviceDetailFeatureTests {
         await store.finish()
     }
 
+    @Test("a characteristic value update for an included service is merged into that nested service")
+    func characteristicUpdateMergesIntoIncludedService() async {
+        let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+        }
+
+        await store.send(.connectTapped) {
+            $0.connectionStatus = .connecting
+        }
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent) {
+            $0.connectionStatus = .connected
+        }
+        fakeConnection.send(.servicesDiscovered(GATTFixtures.allServices))
+        await store.receive(\.connectionEvent) {
+            $0.services = IdentifiedArray(uniqueElements: GATTFixtures.allServices)
+        }
+
+        var updatedCharacteristic = GATTFixtures.txPowerLevelCharacteristic
+        updatedCharacteristic.latestValue = Data([0x09])
+
+        await store.send(.readTapped(
+            service: GATTFixtures.txPowerService.identifier,
+            characteristic: updatedCharacteristic.identifier
+        ))
+
+        fakeConnection.send(.characteristicUpdated(
+            serviceIdentifier: GATTFixtures.txPowerService.identifier,
+            characteristic: updatedCharacteristic
+        ))
+        await store.receive(\.connectionEvent) {
+            $0.services[id: GATTFixtures.genericAccessService.identifier]?
+                .includedServices[0].characteristics[0] = updatedCharacteristic
+        }
+
+        fakeConnection.finish()
+        await store.finish()
+    }
+
     @Test("writing with valid hex input clears any prior error")
     func writingValidHexClearsError() async {
         let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)

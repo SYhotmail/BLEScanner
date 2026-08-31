@@ -48,11 +48,21 @@ public struct GATTService: Identifiable, Equatable, Sendable {
     public let identifier: GATTIdentifier
     public var name: String?
     public var characteristics: [GATTCharacteristic]
+    /// GATT "included services" — other services this one references, discovered via
+    /// `discoverIncludedServices`. Nested a single level: an included service's own
+    /// `includedServices` is always empty.
+    public var includedServices: [GATTService]
 
-    public init(identifier: GATTIdentifier, name: String? = nil, characteristics: [GATTCharacteristic] = []) {
+    public init(
+        identifier: GATTIdentifier,
+        name: String? = nil,
+        characteristics: [GATTCharacteristic] = [],
+        includedServices: [GATTService] = []
+    ) {
         self.identifier = identifier
         self.name = name
         self.characteristics = characteristics
+        self.includedServices = includedServices
     }
 
     /// Label for display: an explicitly discovered `name`, else the Bluetooth SIG assigned

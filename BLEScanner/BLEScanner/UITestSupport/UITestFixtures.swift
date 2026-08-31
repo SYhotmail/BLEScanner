@@ -37,10 +37,25 @@ enum UITestFixtures {
         properties: [.read, .notify]
     )
 
+    static let txPowerLevelCharacteristic = GATTCharacteristic(
+        identifier: GATTIdentifier(rawValue: "2A07"),
+        name: "Tx Power Level",
+        properties: [.read]
+    )
+
+    /// Nested under `batteryService` via GATT service inclusion, so the device-detail screen
+    /// exercises the included-service disclosure row.
+    static let txPowerService = GATTService(
+        identifier: GATTIdentifier(rawValue: "1804"),
+        name: "Tx Power",
+        characteristics: [txPowerLevelCharacteristic]
+    )
+
     static let batteryService = GATTService(
         identifier: GATTIdentifier(rawValue: "180F"),
         name: "Battery Service",
-        characteristics: [batteryCharacteristic]
+        characteristics: [batteryCharacteristic],
+        includedServices: [txPowerService]
     )
 
     static let services: [GATTService] = [batteryService]

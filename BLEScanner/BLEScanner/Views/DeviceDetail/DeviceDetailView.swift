@@ -57,11 +57,39 @@ struct DeviceDetailView: View {
                             characteristic: characteristic
                         )
                     }
+                    ForEach(service.includedServices) { includedService in
+                        includedServiceRow(includedService)
+                    }
                 }
             }
         }
         .navigationTitle(store.device.name ?? "Device")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// A GATT included service, nested inside its parent service's section as a collapsible
+    /// group of that included service's own characteristics.
+    private func includedServiceRow(_ includedService: GATTService) -> some View {
+        DisclosureGroup {
+            ForEach(includedService.characteristics) { characteristic in
+                CharacteristicRowView(
+                    store: store,
+                    serviceIdentifier: includedService.identifier,
+                    characteristic: characteristic
+                )
+            }
+        } label: {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(includedService.displayName)
+                    Text("Included service")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "arrow.turn.down.right")
+            }
+        }
     }
 
     private var isConnectedOrConnecting: Bool {

@@ -104,7 +104,9 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
         serviceIdentifier: GATTIdentifier,
         characteristicIdentifier: GATTIdentifier
     ) -> CBCharacteristic? {
-        peripheral.services?
+        let candidateServices = (peripheral.services ?? [])
+            .flatMap { [$0] + ($0.includedServices ?? []) }
+        return candidateServices
             .first { GATTIdentifier(rawValue: $0.uuid.uuidString) == serviceIdentifier }?
             .characteristics?
             .first { GATTIdentifier(rawValue: $0.uuid.uuidString) == characteristicIdentifier }
@@ -119,8 +121,20 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
         }
         guard let services = peripheral.services else { return }
         for service in services {
+            peripheral.discoverIncludedServices(nil, for: service)
             peripheral.discoverCharacteristics(nil, for: service)
         }
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverIncludedServicesFor service: CBService, error: Error?) {
+        if let error {
+            continuation?.yield(.operationFailed(.operationFailed(error.localizedDescription)))
+            return
+        }
+        for included in service.includedServices ?? [] where included.characteristics == nil {
+            peripheral.discoverCharacteristics(nil, for: included)
+        }
+        emitServiceSnapshotIfComplete()
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
@@ -165,11 +179,23 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
 
     private func emitServiceSnapshotIfComplete() {
         guard let services = peripheral.services else { return }
-        guard services.allSatisfy({ $0.characteristics != nil }) else { return }
+        // Every top-level service must have had both its characteristics and its included
+        // services discovered, and every included service must have had its characteristics
+        // discovered, before the snapshot is complete.
+        guard services.allSatisfy({ $0.characteristics != nil && $0.includedServices != nil }) else { return }
+        let includedServices = services.flatMap { $0.includedServices ?? [] }
+        guard includedServices.allSatisfy({ $0.characteristics != nil }) else { return }
+
         let gattServices = services.map { service in
             GATTService(
                 identifier: GATTIdentifier(rawValue: service.uuid.uuidString),
-                characteristics: (service.characteristics ?? []).map(gattCharacteristic(from:))
+                characteristics: (service.characteristics ?? []).map(gattCharacteristic(from:)),
+                includedServices: (service.includedServices ?? []).map { included in
+                    GATTService(
+                        identifier: GATTIdentifier(rawValue: included.uuid.uuidString),
+                        characteristics: (included.characteristics ?? []).map(gattCharacteristic(from:))
+                    )
+                }
             )
         }
         continuation?.yield(.servicesDiscovered(gattServices))

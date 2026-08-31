@@ -180,13 +180,27 @@ public struct DeviceDetailFeature {
     }
 
     private func update(characteristic: GATTCharacteristic, serviceIdentifier: GATTIdentifier, in state: inout State) {
-        guard var service = state.services[id: serviceIdentifier] else { return }
-        if let index = service.characteristics.firstIndex(where: { $0.id == characteristic.id }) {
-            service.characteristics[index] = characteristic
-        } else {
-            service.characteristics.append(characteristic)
+        for topLevelID in state.services.ids {
+            guard var service = state.services[id: topLevelID] else { continue }
+            if service.identifier == serviceIdentifier {
+                Self.merge(characteristic, into: &service.characteristics)
+                state.services[id: topLevelID] = service
+                return
+            }
+            if let index = service.includedServices.firstIndex(where: { $0.identifier == serviceIdentifier }) {
+                Self.merge(characteristic, into: &service.includedServices[index].characteristics)
+                state.services[id: topLevelID] = service
+                return
+            }
         }
-        state.services[id: serviceIdentifier] = service
+    }
+
+    private static func merge(_ characteristic: GATTCharacteristic, into characteristics: inout [GATTCharacteristic]) {
+        if let index = characteristics.firstIndex(where: { $0.id == characteristic.id }) {
+            characteristics[index] = characteristic
+        } else {
+            characteristics.append(characteristic)
+        }
     }
 
     private static func describeWriteError(_ error: Error) -> String {
