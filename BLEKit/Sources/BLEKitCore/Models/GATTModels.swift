@@ -92,6 +92,13 @@ public struct GATTCharacteristic: Identifiable, Equatable, Sendable {
     public var displayName: String {
         name ?? GATTAssignedNumbers.characteristicName(for: identifier) ?? identifier.rawValue
     }
+
+    /// A human-readable decoding of `latestValue` for the well-known SIG characteristic types
+    /// this app understands (currently the Current Time Service / date-time family), or `nil`
+    /// when there is no value or no special decoding for this UUID.
+    public var interpretedValue: String? {
+        latestValue.flatMap { GATTCharacteristicValueInterpreter.interpretation(of: $0, for: identifier) }
+    }
 }
 
 public struct GATTService: Identifiable, Equatable, Sendable {

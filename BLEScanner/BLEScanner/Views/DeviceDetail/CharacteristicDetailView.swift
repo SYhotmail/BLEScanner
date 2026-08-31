@@ -26,22 +26,58 @@ struct CharacteristicDetailView: View {
         .padding(.vertical, 4)
     }
 
+    /// Every descriptor already has a value — one read pass has covered them all.
+    private var allDescriptorsRead: Bool {
+        characteristic.descriptors.allSatisfy { $0.value != nil }
+    }
+
     private var descriptorsSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Descriptors")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            ForEach(characteristic.descriptors) { descriptor in
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(descriptor.displayName)
-                        .font(.caption)
-                    if descriptor.displayName != descriptor.identifier.rawValue {
-                        Text(descriptor.identifier.rawValue)
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(.secondary)
-                    }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Descriptors")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Read") {
+                    store.send(.readDescriptorsTapped(
+                        service: serviceIdentifier,
+                        characteristic: characteristic.identifier
+                    ))
                 }
-                .accessibilityIdentifier("characteristic.\(characteristic.identifier.rawValue).descriptor.\(descriptor.identifier.rawValue)")
+                .font(.caption)
+                .disabled(allDescriptorsRead)
+                .accessibilityIdentifier("characteristic.\(characteristic.identifier.rawValue).descriptorsReadButton")
+            }
+            ForEach(characteristic.descriptors) { descriptor in
+                descriptorRow(descriptor)
+            }
+        }
+    }
+
+    private func descriptorRow(_ descriptor: GATTDescriptor) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(descriptor.displayName)
+                    .font(.caption)
+                if descriptor.displayName != descriptor.identifier.rawValue {
+                    Text(descriptor.identifier.rawValue)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let value = descriptor.value {
+                if let interpreted = descriptor.interpretedValue {
+                    Text(interpreted)
+                        .font(.caption.monospaced())
+                }
+                Text(value.rawDescription)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("No value read yet")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -58,6 +94,10 @@ struct CharacteristicDetailView: View {
                 .accessibilityIdentifier("characteristic.\(characteristic.identifier.rawValue).readButton")
             }
             if let value = characteristic.latestValue {
+                if let decoded = characteristic.interpretedValue {
+                    Text("Decoded: \(decoded)")
+                        .font(.caption.monospaced())
+                }
                 Text("Hex: \(CharacteristicValueCodec.hexString(from: value))")
                     .font(.caption.monospaced())
                 if let text = CharacteristicValueCodec.utf8String(from: value) {

@@ -196,6 +196,52 @@ struct DeviceDetailFeatureTests {
         await store.finish()
     }
 
+    @Test("reading descriptors merges the decoded value into the owning characteristic")
+    func readingDescriptorMergesValue() async {
+        let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+        }
+
+        await store.send(.connectTapped) {
+            $0.connectionStatus = .connecting
+        }
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent) {
+            $0.connectionStatus = .connected
+        }
+        fakeConnection.send(.servicesDiscovered(GATTFixtures.allServices))
+        await store.receive(\.connectionEvent) {
+            $0.services = IdentifiedArray(uniqueElements: GATTFixtures.allServices)
+        }
+
+        let cccd = GATTIdentifier(rawValue: "2902")
+        await store.send(.readDescriptorsTapped(
+            service: GATTFixtures.batteryService.identifier,
+            characteristic: GATTFixtures.batteryLevelCharacteristic.identifier
+        ))
+
+        // The hardware layer re-emits the whole characteristic with the descriptor value filled in.
+        var updated = GATTFixtures.batteryLevelCharacteristic
+        updated.descriptors = [GATTDescriptor(identifier: cccd, value: .uint(0x0001))]
+        fakeConnection.send(.characteristicUpdated(
+            serviceIdentifier: GATTFixtures.batteryService.identifier,
+            characteristic: updated
+        ))
+        await store.receive(\.connectionEvent) {
+            $0.services[id: GATTFixtures.batteryService.identifier]?.characteristics[0] = updated
+        }
+
+        let stored = store.state.services[id: GATTFixtures.batteryService.identifier]?.characteristics[0].descriptors.first
+        #expect(stored?.value == .uint(0x0001))
+        #expect(stored?.interpretedValue == "Notifications enabled")
+
+        fakeConnection.finish()
+        await store.finish()
+    }
+
     @Test("writing with valid hex input clears any prior error")
     func writingValidHexClearsError() async {
         let fakeConnection = FakePeripheralConnectionClient(identifier: DiscoveredDeviceFixtures.plainSensor.identifier)

@@ -27,6 +27,7 @@ public final class FakePeripheralConnectionClient: @unchecked Sendable {
             disconnect: {},
             discoverServices: {},
             readValue: { _, _ in },
+            readDescriptor: { _, _, _ in },
             writeValue: { _, _, _, _ in },
             setNotify: { _, _, _ in }
         )

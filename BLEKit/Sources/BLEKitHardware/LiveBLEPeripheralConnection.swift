@@ -64,6 +64,24 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
         }
     }
 
+    public func readDescriptor(
+        serviceIdentifier: GATTIdentifier,
+        characteristicIdentifier: GATTIdentifier,
+        descriptorIdentifier: GATTIdentifier
+    ) {
+        queue.async {
+            guard let descriptor = self.descriptor(
+                serviceIdentifier: serviceIdentifier,
+                characteristicIdentifier: characteristicIdentifier,
+                descriptorIdentifier: descriptorIdentifier
+            ) else {
+                self.continuation?.yield(.operationFailed(.characteristicNotFound))
+                return
+            }
+            self.peripheral.readValue(for: descriptor)
+        }
+    }
+
     public func writeValue(
         _ data: Data,
         serviceIdentifier: GATTIdentifier,
@@ -116,6 +134,16 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
             .characteristics?
             .first { GATTIdentifier(rawValue: $0.uuid.uuidString) == characteristicIdentifier }
     }
+
+    private func descriptor(
+        serviceIdentifier: GATTIdentifier,
+        characteristicIdentifier: GATTIdentifier,
+        descriptorIdentifier: GATTIdentifier
+    ) -> CBDescriptor? {
+        characteristic(serviceIdentifier: serviceIdentifier, characteristicIdentifier: characteristicIdentifier)?
+            .descriptors?
+            .first { GATTIdentifier(rawValue: $0.uuid.uuidString) == descriptorIdentifier }
+    }
 }
 
 extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
@@ -167,6 +195,21 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil, let service = characteristic.service else { return }
+        continuation?.yield(.characteristicUpdated(
+            serviceIdentifier: GATTIdentifier(rawValue: service.uuid.uuidString),
+            characteristic: gattCharacteristic(from: characteristic)
+        ))
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
+        guard let characteristic = descriptor.characteristic, let service = characteristic.service else { return }
+        if let error {
+            continuation?.yield(.operationFailed(.operationFailed(error.localizedDescription)))
+            return
+        }
+        // Re-emit the owning characteristic: `gattCharacteristic(from:)` rebuilds its descriptor
+        // list, and CoreBluetooth keeps every previously-read `CBDescriptor.value` populated, so
+        // the reducer's existing characteristic-merge picks up the new descriptor value.
         continuation?.yield(.characteristicUpdated(
             serviceIdentifier: GATTIdentifier(rawValue: service.uuid.uuidString),
             characteristic: gattCharacteristic(from: characteristic)
@@ -231,8 +274,23 @@ extension LiveBLEPeripheralConnection: CBPeripheralDelegate {
             latestValue: characteristic.value,
             isNotifying: characteristic.isNotifying,
             descriptors: (characteristic.descriptors ?? []).map { descriptor in
-                GATTDescriptor(identifier: GATTIdentifier(rawValue: descriptor.uuid.uuidString))
+                GATTDescriptor(
+                    identifier: GATTIdentifier(rawValue: descriptor.uuid.uuidString),
+                    value: normalizedDescriptorValue(descriptor.value)
+                )
             }
         )
+    }
+
+    /// `CBDescriptor.value` is `Any?`; for the well-known descriptors CoreBluetooth only ever
+    /// vends `NSNumber`, `NSString`, or `NSData`. Anything else collapses to `nil`.
+    private func normalizedDescriptorValue(_ value: Any?) -> GATTDescriptorValue? {
+        switch value {
+        case let number as NSNumber: .uint(number.uint64Value)
+        case let string as NSString: .string(string as String)
+        case let data as Data: .data(data)
+        case let data as NSData: .data(data as Data)
+        default: nil
+        }
     }
 }

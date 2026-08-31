@@ -48,13 +48,13 @@ Selecting a device opens its detail screen:
 
 - **Connection lifecycle**: Connect / Disconnect action with visible status (Disconnected, Connecting, Connected, Failed).
 - **GATT tree**: once connected, services and their characteristics are discovered and displayed as an expandable tree. Each characteristic shows capability badges — Read, Write, Notify (Notify also covers Indicate; both are exposed as a single "subscribe" affordance, matching CoreBluetooth's unified `setNotifyValue` API), and a Descriptors badge when the characteristic has any.
-- **Descriptors**: each characteristic's descriptors are discovered and listed by name (resolved from the Bluetooth SIG assigned numbers, e.g. `2902` → "Client Characteristic Configuration") with the raw UUID. Descriptor values are not read or written — enabling Notify writes the CCCD implicitly via `setNotifyValue`.
+- **Descriptors**: each characteristic's descriptors are discovered and listed by name (resolved from the Bluetooth SIG assigned numbers, e.g. `2902` → "Client Characteristic Configuration") with the raw UUID. A single **Read** action fetches every descriptor value for the characteristic in one pass (and disables once they have all been read), showing for each both a decoded interpretation for the well-known types — CCCD/SCCD subscription state, Characteristic Extended Properties flags, Characteristic User Description text, Characteristic Presentation Format (format type / exponent / unit), Report Reference, Number of Digitals — and the raw bytes. Descriptor writes are out of scope; enabling Notify still writes the CCCD implicitly via `setNotifyValue`.
 
 ## 7. Characteristic interaction
 
 For any characteristic with the relevant capability:
 
-- **Read**: triggers a read and displays the latest value both as a hex string and as an attempted UTF-8 decode.
+- **Read**: triggers a read and displays the latest value as a hex string and an attempted UTF-8 decode. For the well-known Bluetooth SIG date-time characteristics (Current Time Service — Current Time, Local Time Information, Reference Time Information — plus the standalone Date Time / Day Date Time / Exact Time 256 / Time Zone / DST Offset), it additionally shows a decoded interpretation parsed per the SIG GATT Specification Supplement (little-endian fields, the shared 7-byte "Date Time" structure, 15-minute signed time-zone offset, DST-offset and adjust-reason enumerations).
 - **Write**: a segmented control lets the user choose the input format — **Text (UTF-8)** or **Hex byte array** (e.g. `0A1F3C`) — with inline validation (rejecting malformed hex before attempting a write).
 - **Notify**: a toggle subscribes/unsubscribes to value change notifications; while subscribed, incoming values update live.
 
@@ -104,7 +104,7 @@ Platform constraints and deliberate deviations from the Android reference app:
 - iBeacon detection (always-on parsing + opt-in enhanced ranging).
 - Persisted device-sighting History.
 - Connect/disconnect, GATT service/characteristic/descriptor discovery.
-- Read, Write (Text/Hex), Notify per characteristic; descriptor listing (read-only).
+- Read, Write (Text/Hex), Notify per characteristic; descriptor read with decoded interpretation for well-known types (read-only).
 - Filtering by Name, Identifier, minimum RSSI.
 - Settings: Enhanced Ranging toggle, Known Beacons management.
 - Adaptive NavigationSplitView UI for iPhone and iPad.

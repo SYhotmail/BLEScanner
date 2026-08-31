@@ -26,6 +26,7 @@ public struct DeviceDetailFeature {
         case disconnectTapped
         case connectionEvent(PeripheralConnectionEvent)
         case readTapped(service: GATTIdentifier, characteristic: GATTIdentifier)
+        case readDescriptorsTapped(service: GATTIdentifier, characteristic: GATTIdentifier)
         case writeFormatChanged(characteristic: GATTIdentifier, format: WriteFormat)
         case writeInputChanged(characteristic: GATTIdentifier, text: String)
         case writeTapped(service: GATTIdentifier, characteristic: GATTIdentifier)
@@ -78,6 +79,16 @@ public struct DeviceDetailFeature {
 
             case let .readTapped(service, characteristic):
                 return readEffect(identifier: state.device.identifier, service: service, characteristic: characteristic)
+
+            case let .readDescriptorsTapped(service, characteristic):
+                let descriptors = descriptorIdentifiers(service: service, characteristic: characteristic, in: state)
+                guard !descriptors.isEmpty else { return .none }
+                return readDescriptorsEffect(
+                    identifier: state.device.identifier,
+                    service: service,
+                    characteristic: characteristic,
+                    descriptors: descriptors
+                )
 
             case let .writeFormatChanged(characteristic, format):
                 state.writeFormatsByCharacteristic[characteristic] = format
@@ -153,6 +164,40 @@ public struct DeviceDetailFeature {
         }
     }
 
+    private func readDescriptorsEffect(
+        identifier: UUID,
+        service: GATTIdentifier,
+        characteristic: GATTIdentifier,
+        descriptors: [GATTIdentifier]
+    ) -> Effect<Action> {
+        let bluetoothScanner = bluetoothScanner
+        return .run { _ in
+            guard let connection = try? bluetoothScanner.makeConnection(identifier) else { return }
+            for descriptor in descriptors {
+                connection.readDescriptor(service, characteristic, descriptor)
+            }
+        }
+    }
+
+    /// The identifiers of every descriptor on `characteristic`, whether it sits directly under
+    /// `service` or under one of its included services.
+    private func descriptorIdentifiers(
+        service: GATTIdentifier,
+        characteristic: GATTIdentifier,
+        in state: State
+    ) -> [GATTIdentifier] {
+        for topLevel in state.services {
+            let owner = topLevel.identifier == service
+                ? topLevel
+                : topLevel.includedServices.first { $0.identifier == service }
+            guard let owner else { continue }
+            return owner.characteristics
+                .first { $0.identifier == characteristic }?
+                .descriptors.map(\.identifier) ?? []
+        }
+        return []
+    }
+
     private func writeEffect(
         identifier: UUID,
         data: Data,
@@ -196,17 +241,33 @@ public struct DeviceDetailFeature {
     }
 
     private static func merge(_ characteristic: GATTCharacteristic, into characteristics: inout [GATTCharacteristic]) {
-        if let index = characteristics.firstIndex(where: { $0.id == characteristic.id }) {
-            var merged = characteristic
-            // Read/notify updates carry whatever descriptors CoreBluetooth still has attached;
-            // if an update arrives without them, keep the ones discovery already found.
-            if merged.descriptors.isEmpty {
-                merged.descriptors = characteristics[index].descriptors
-            }
-            characteristics[index] = merged
-        } else {
+        guard let index = characteristics.firstIndex(where: { $0.id == characteristic.id }) else {
             characteristics.append(characteristic)
+            return
         }
+        var merged = characteristic
+        let existing = characteristics[index]
+        // Read/notify updates carry whatever descriptors CoreBluetooth still has attached; if an
+        // update arrives without them, keep the ones discovery already found.
+        if merged.descriptors.isEmpty {
+            merged.descriptors = existing.descriptors
+        } else {
+            // Carry forward any descriptor value this snapshot doesn't itself include, so reading
+            // one descriptor never blanks out a value already read for one of its siblings.
+            merged.descriptors = merged.descriptors.map { incoming in
+                guard incoming.value == nil,
+                      let prior = existing.descriptors.first(where: { $0.id == incoming.id }),
+                      prior.value != nil
+                else { return incoming }
+                var filled = incoming
+                filled.value = prior.value
+                return filled
+            }
+            for prior in existing.descriptors where !merged.descriptors.contains(where: { $0.id == prior.id }) {
+                merged.descriptors.append(prior)
+            }
+        }
+        characteristics[index] = merged
     }
 
     private static func describeWriteError(_ error: Error) -> String {

@@ -12,6 +12,7 @@ public struct PeripheralConnectionClient: Sendable {
     public var disconnect: @Sendable () -> Void
     public var discoverServices: @Sendable () -> Void
     public var readValue: @Sendable (_ service: GATTIdentifier, _ characteristic: GATTIdentifier) -> Void
+    public var readDescriptor: @Sendable (_ service: GATTIdentifier, _ characteristic: GATTIdentifier, _ descriptor: GATTIdentifier) -> Void
     public var writeValue: @Sendable (_ data: Data, _ service: GATTIdentifier, _ characteristic: GATTIdentifier, _ withResponse: Bool) -> Void
     public var setNotify: @Sendable (_ enabled: Bool, _ service: GATTIdentifier, _ characteristic: GATTIdentifier) -> Void
 
@@ -22,6 +23,7 @@ public struct PeripheralConnectionClient: Sendable {
         disconnect: @escaping @Sendable () -> Void,
         discoverServices: @escaping @Sendable () -> Void,
         readValue: @escaping @Sendable (GATTIdentifier, GATTIdentifier) -> Void,
+        readDescriptor: @escaping @Sendable (GATTIdentifier, GATTIdentifier, GATTIdentifier) -> Void,
         writeValue: @escaping @Sendable (Data, GATTIdentifier, GATTIdentifier, Bool) -> Void,
         setNotify: @escaping @Sendable (Bool, GATTIdentifier, GATTIdentifier) -> Void
     ) {
@@ -31,6 +33,7 @@ public struct PeripheralConnectionClient: Sendable {
         self.disconnect = disconnect
         self.discoverServices = discoverServices
         self.readValue = readValue
+        self.readDescriptor = readDescriptor
         self.writeValue = writeValue
         self.setNotify = setNotify
     }
@@ -44,6 +47,7 @@ public struct PeripheralConnectionClient: Sendable {
             disconnect: { connection.disconnect() },
             discoverServices: { connection.discoverServices() },
             readValue: { connection.readValue(serviceIdentifier: $0, characteristicIdentifier: $1) },
+            readDescriptor: { connection.readDescriptor(serviceIdentifier: $0, characteristicIdentifier: $1, descriptorIdentifier: $2) },
             writeValue: { connection.writeValue($0, serviceIdentifier: $1, characteristicIdentifier: $2, withResponse: $3) },
             setNotify: { connection.setNotify($0, serviceIdentifier: $1, characteristicIdentifier: $2) }
         )

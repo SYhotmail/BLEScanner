@@ -64,6 +64,14 @@ final class AutopilotPeripheralConnectionClient: @unchecked Sendable {
                     channel.send(.characteristicUpdated(serviceIdentifier: service, characteristic: updated))
                 }
             },
+            readDescriptor: { [channel] service, _, descriptor in
+                Task {
+                    try? await Task.sleep(for: .milliseconds(100))
+                    var updated = UITestFixtures.batteryCharacteristic
+                    updated.descriptors = [GATTDescriptor(identifier: descriptor, value: .uint(0x0001))]
+                    channel.send(.characteristicUpdated(serviceIdentifier: service, characteristic: updated))
+                }
+            },
             writeValue: { [channel] _, service, characteristic, _ in
                 channel.send(.writeCompleted(serviceIdentifier: service, characteristicIdentifier: characteristic))
             },

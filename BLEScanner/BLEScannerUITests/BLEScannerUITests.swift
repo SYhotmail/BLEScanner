@@ -248,8 +248,13 @@ final class BLEScannerUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Hex: 55"].waitForExistence(timeout: 5))
 
-        // The expanded characteristic also lists its discovered descriptors by SIG name.
+        // The expanded characteristic also lists its discovered descriptors by SIG name, and a
+        // single Read fetches every descriptor value, decoding each to a human-readable string.
         XCTAssertTrue(app.staticTexts["Client Characteristic Configuration"].waitForExistence(timeout: 5))
+        let descriptorsReadButton = app.buttons["characteristic.2A19.descriptorsReadButton"]
+        XCTAssertTrue(descriptorsReadButton.waitForExistence(timeout: 5))
+        tapCenter(descriptorsReadButton)
+        XCTAssertTrue(app.staticTexts["Notifications enabled"].waitForExistence(timeout: 5))
     }
 
     /// Taps the geometric centre of an element via `XCUICoordinate`, bypassing XCUITest's
