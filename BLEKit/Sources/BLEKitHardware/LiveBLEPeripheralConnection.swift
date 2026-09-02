@@ -127,7 +127,9 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
     }
 
     func handleDidFailToConnect(error: Error?) {
-        continuation?.yield(.stateChanged(.failed(error?.localizedDescription ?? "Failed to connect")))
+        continuation?.yield(.stateChanged(.failed(
+            CoreBluetoothErrorDescription.string(for: error) ?? "Failed to connect"
+        )))
     }
 
     func handleDidDisconnect(reason: String?) {

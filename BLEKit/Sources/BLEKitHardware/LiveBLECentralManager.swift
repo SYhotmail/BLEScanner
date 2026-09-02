@@ -161,7 +161,9 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        connectionForPeripheral(peripheral)?.handleDidDisconnect(reason: error?.localizedDescription)
+        connectionForPeripheral(peripheral)?.handleDidDisconnect(
+            reason: CoreBluetoothErrorDescription.string(for: error)
+        )
         removePeripheral(peripheral)
     }
 }
