@@ -77,8 +77,17 @@ public struct DeviceDetailFeature {
             case .connectionEvent(.writeCompleted):
                 return .none
 
-            case .connectionEvent(.operationFailed):
-                return .none
+            case let .connectionEvent(.operationFailed(error)):
+                let bleLog = bleLog
+                let identifier = state.device.identifier
+                let name = state.device.name
+                return .run { _ in
+                    bleLog.record(.peripheralOperationFailed(
+                        identifier: identifier,
+                        name: name,
+                        reason: String(describing: error)
+                    ))
+                }
 
             case let .readTapped(service, characteristic):
                 return readEffect(identifier: state.device.identifier, service: service, characteristic: characteristic)
@@ -116,8 +125,15 @@ public struct DeviceDetailFeature {
                         characteristic: characteristic
                     )
                 } catch {
-                    state.writeErrorsByCharacteristic[characteristic] = Self.describeWriteError(error)
-                    return .none
+                    let reason = Self.describeWriteError(error)
+                    state.writeErrorsByCharacteristic[characteristic] = reason
+                    let bleLog = bleLog
+                    return .run { _ in
+                        bleLog.record(.characteristicWriteRejected(
+                            characteristic: characteristic.rawValue,
+                            reason: reason
+                        ))
+                    }
                 }
 
             case let .notifyToggled(service, characteristic, enabled):

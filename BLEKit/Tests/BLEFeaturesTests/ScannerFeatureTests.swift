@@ -554,6 +554,59 @@ struct ScannerFeatureTests {
         await store.send(.rowTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
             $0.destination = DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)
         }
+        await store.finish()
+    }
+
+    @Test("rowTapped records the device as selected on the injected log")
+    func rowTappedRecordsDeviceSelected() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        var state = ScannerFeature.State()
+        state.devices = [DiscoveredDeviceFixtures.plainSensor]
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+
+        await store.send(.rowTapped(DiscoveredDeviceFixtures.plainSensor.id)) {
+            $0.destination = DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)
+        }
+        await store.finish()
+
+        #expect(recorded.value == [
+            .deviceSelected(
+                identifier: DiscoveredDeviceFixtures.plainSensor.identifier,
+                name: DiscoveredDeviceFixtures.plainSensor.name
+            ),
+        ])
+    }
+
+    @Test("a changed Bluetooth state is recorded once on the injected log")
+    func bluetoothStateChangeRecordsCriticalEvent() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let store = TestStore(initialState: ScannerFeature.State()) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.scanEvent(.stateChanged(.poweredOn))) {
+            $0.bluetoothState = .poweredOn
+        }
+        // The same state again is a no-op — no second log entry.
+        await store.send(.scanEvent(.stateChanged(.poweredOn)))
+        await store.send(.scanEvent(.stateChanged(.poweredOff))) {
+            $0.bluetoothState = .poweredOff
+        }
+        await store.finish()
+
+        #expect(recorded.value == [
+            .bluetoothStateChanged(.poweredOn),
+            .bluetoothStateChanged(.poweredOff),
+        ])
     }
 
     @Test("connectTapped presents the device detail screen and starts connecting")

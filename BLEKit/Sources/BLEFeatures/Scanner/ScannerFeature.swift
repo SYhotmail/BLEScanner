@@ -201,8 +201,10 @@ public struct ScannerFeature {
                 return recomputeFilteredSortedDevicesEffect(state: state)
 
             case let .scanEvent(.stateChanged(bluetoothState)):
+                guard state.bluetoothState != bluetoothState else { return .none }
                 state.bluetoothState = bluetoothState
-                return .none
+                let bleLog = bleLog
+                return .run { _ in bleLog.record(.bluetoothStateChanged(bluetoothState)) }
 
             case let .scanEvent(.discovered(advertisement)):
                 return upsert(advertisement: advertisement, into: &state)
@@ -218,12 +220,17 @@ public struct ScannerFeature {
             case let .rowTapped(id):
                 guard let device = state.devices[id: id] else { return .none }
                 state.destination = DeviceDetailFeature.State(device: device)
-                return .none
+                let bleLog = bleLog
+                return .run { _ in
+                    bleLog.record(.deviceSelected(identifier: device.identifier, name: device.name))
+                }
 
             case let .connectTapped(id):
                 guard let device = state.devices[id: id] else { return .none }
                 state.destination = DeviceDetailFeature.State(device: device)
+                let bleLog = bleLog
                 return .run { send in
+                    bleLog.record(.deviceSelected(identifier: device.identifier, name: device.name))
                     await send(.destination(.presented(.connectTapped)))
                 }
 

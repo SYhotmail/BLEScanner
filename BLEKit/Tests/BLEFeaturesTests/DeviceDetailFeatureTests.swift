@@ -313,6 +313,59 @@ struct DeviceDetailFeatureTests {
         ])
     }
 
+    @Test("a GATT operation failure is recorded as a critical error event")
+    func operationFailureRecordsCriticalEvent() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let device = DiscoveredDeviceFixtures.plainSensor
+        let fakeConnection = FakePeripheralConnectionClient(identifier: device.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: device)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.connectTapped)
+        fakeConnection.send(.operationFailed(.characteristicNotFound))
+        await store.receive(\.connectionEvent)
+
+        fakeConnection.finish()
+        await store.finish()
+
+        #expect(recorded.value == [
+            .peripheralOperationFailed(
+                identifier: device.identifier,
+                name: device.name,
+                reason: "characteristicNotFound"
+            ),
+        ])
+    }
+
+    @Test("an invalid write input is recorded as a rejected-write critical event")
+    func invalidWriteInputRecordsCriticalEvent() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: DiscoveredDeviceFixtures.plainSensor)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        let characteristic = GATTFixtures.deviceNameCharacteristic.identifier
+        await store.send(.writeFormatChanged(characteristic: characteristic, format: .hex))
+        await store.send(.writeInputChanged(characteristic: characteristic, text: "ZZ"))
+        await store.send(.writeTapped(service: GATTFixtures.genericAccessService.identifier, characteristic: characteristic))
+        await store.finish()
+
+        #expect(recorded.value == [
+            .characteristicWriteRejected(
+                characteristic: characteristic.rawValue,
+                reason: "Hex input may only contain 0-9 and A-F."
+            ),
+        ])
+    }
+
     @Test("a failed connection is recorded as a connection-failure critical event")
     func failedConnectionRecordsCriticalEvent() async {
         let recorded = LockIsolated<[BLELogEvent]>([])

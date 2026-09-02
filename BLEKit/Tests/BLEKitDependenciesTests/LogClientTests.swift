@@ -1,4 +1,5 @@
 import BLEKitCore
+import BLEKitHardware
 import Dependencies
 import Foundation
 import os
@@ -25,13 +26,36 @@ struct LogClientTests {
             BLELogEvent.peripheralConnectionFailed(identifier: identifier, name: "", reason: "timed out").message
                 == "Failed to connect to peripheral E2C56DB5-DFFB-48D2-B060-D0F5A71096E0: timed out"
         )
+        #expect(
+            BLELogEvent.deviceSelected(identifier: identifier, name: "Sensor").message
+                == "Selected device Sensor (E2C56DB5-DFFB-48D2-B060-D0F5A71096E0)"
+        )
+        #expect(
+            BLELogEvent.bluetoothStateChanged(.poweredOff).message
+                == "Bluetooth state changed to poweredOff"
+        )
+        #expect(
+            BLELogEvent.peripheralOperationFailed(identifier: identifier, name: nil, reason: "characteristicNotFound").message
+                == "Operation failed on peripheral E2C56DB5-DFFB-48D2-B060-D0F5A71096E0: characteristicNotFound"
+        )
+        #expect(
+            BLELogEvent.characteristicWriteRejected(characteristic: "2A00", reason: "bad hex").message
+                == "Write to characteristic 2A00 rejected: bad hex"
+        )
     }
 
-    @Test("only connection failures are logged at the error level")
-    func failureLevel() {
-        #expect(BLELogEvent.peripheralConnectionFailed(identifier: UUID(), name: nil, reason: "x").isFailure)
-        #expect(!BLELogEvent.scanningStarted(mode: .manual).isFailure)
-        #expect(!BLELogEvent.peripheralConnected(identifier: UUID(), name: nil).isFailure)
+    @Test("failures and unusable Bluetooth states log at .error, everything else at .default")
+    func eventLevels() {
+        #expect(BLELogEvent.peripheralConnectionFailed(identifier: UUID(), name: nil, reason: "x").level == .error)
+        #expect(BLELogEvent.peripheralOperationFailed(identifier: UUID(), name: nil, reason: "x").level == .error)
+        #expect(BLELogEvent.characteristicWriteRejected(characteristic: "2A00", reason: "x").level == .error)
+        #expect(BLELogEvent.bluetoothStateChanged(.poweredOff).level == .error)
+        #expect(BLELogEvent.bluetoothStateChanged(.unauthorized).level == .error)
+
+        #expect(BLELogEvent.bluetoothStateChanged(.poweredOn).level == .default)
+        #expect(BLELogEvent.scanningStarted(mode: .manual).level == .default)
+        #expect(BLELogEvent.deviceSelected(identifier: UUID(), name: nil).level == .default)
+        #expect(BLELogEvent.peripheralConnected(identifier: UUID(), name: nil).level == .default)
     }
 
     @Test("the disabled client writes to OSLog.disabled and never traps")
@@ -39,7 +63,11 @@ struct LogClientTests {
         let client = LogClient.disabled
         client.record(.scanningStarted(mode: .periodic))
         client.record(.scanningStopped)
+        client.record(.deviceSelected(identifier: UUID(), name: "x"))
+        client.record(.bluetoothStateChanged(.unsupported))
         client.record(.peripheralConnectionFailed(identifier: UUID(), name: "x", reason: "y"))
+        client.record(.peripheralOperationFailed(identifier: UUID(), name: "x", reason: "y"))
+        client.record(.characteristicWriteRejected(characteristic: "2A00", reason: "y"))
     }
 
     @Test("the live client is backed by a real subsystem log and doesn't trap")
