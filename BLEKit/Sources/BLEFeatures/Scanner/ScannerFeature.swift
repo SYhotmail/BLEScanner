@@ -127,6 +127,7 @@ public struct ScannerFeature {
     @Dependency(\.beaconRanging) var beaconRanging
     @Dependency(\.history) var historyClient
     @Dependency(\.pasteboard) var pasteboard
+    @Dependency(\.bleLog) var bleLog
     @Dependency(\.date.now) var now
     @Dependency(\.continuousClock) var clock
 
@@ -335,10 +336,14 @@ public struct ScannerFeature {
     }
 
     private func startScanning(into state: inout State) -> Effect<Action> {
+        let wasScanning = state.isScanning
         state.isScanning = true
         let bluetoothScanner = bluetoothScanner
+        let bleLog = bleLog
+        let mode = state.settings.scanMode
         let options = scanOptions(for: state)
         return .merge(
+            wasScanning ? .none : .run { _ in bleLog.record(.scanningStarted(mode: mode)) },
             .run { send in
                 for await event in bluetoothScanner.scanEvents() {
                     await send(.scanEvent(event))
@@ -351,9 +356,12 @@ public struct ScannerFeature {
     }
 
     private func stopScanning(into state: inout State) -> Effect<Action> {
+        let wasScanning = state.isScanning
         state.isScanning = false
         let bluetoothScanner = bluetoothScanner
+        let bleLog = bleLog
         return .merge(
+            wasScanning ? .run { _ in bleLog.record(.scanningStopped) } : .none,
             .run { _ in bluetoothScanner.stopScanning() },
             .cancel(id: CancelID.scan),
             .cancel(id: CancelID.restart),

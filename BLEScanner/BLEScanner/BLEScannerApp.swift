@@ -26,6 +26,7 @@ struct BLEScannerApp: App {
                 $0.bluetoothScanner = scanner.client
                 $0.beaconRanging = FakeBeaconRangingClient().client
                 $0.history = InMemoryHistoryClient(seed: HistoryRecordFixtures.all).client
+                $0.bleLog = .disabled
             } operation: {
                 Store(initialState: AppFeature.State()) {
                     AppFeature()

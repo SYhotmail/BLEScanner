@@ -1,4 +1,5 @@
 import BLEKitCore
+import BLEKitDependencies
 import BLEKitHardware
 import BLEKitTestSupport
 import ComposableArchitecture
@@ -411,6 +412,39 @@ struct ScannerFeatureTests {
         }
 
         await store.send(.scanToggleTapped)
+    }
+
+    @Test("manual scan start then stop records the matching critical events to the injected log")
+    func scanStartStopRecordsCriticalEvents() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let fakeScanner = FakeBluetoothScannerClient()
+        let state = ScannerFeature.State()
+        state.$settings.withLock { $0.scanMode = .manual }
+        let store = TestStore(initialState: state) {
+            ScannerFeature()
+        } withDependencies: {
+            $0.defaultAppStorage = .inMemory
+            $0.bluetoothScanner = fakeScanner.client
+            $0.continuousClock = TestClock()
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.scanToggleTapped) { $0.isScanning = true }
+        await store.send(.scanToggleTapped) { $0.isScanning = false }
+        // Toggling again while already stopped must not re-log a "stopped" event.
+        await store.send(.scanToggleTapped) { $0.isScanning = true }
+
+        fakeScanner.finish()
+        await store.send(.scanToggleTapped) { $0.isScanning = false }
+        await store.finish()
+
+        #expect(recorded.value == [
+            .scanningStarted(mode: .manual),
+            .scanningStopped,
+            .scanningStarted(mode: .manual),
+            .scanningStopped,
+        ])
     }
     
     private static func recomputeFilteredSortedDevices(state: inout ScannerFeature.State) {

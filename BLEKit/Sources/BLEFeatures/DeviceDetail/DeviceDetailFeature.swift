@@ -38,6 +38,7 @@ public struct DeviceDetailFeature {
     }
 
     @Dependency(\.bluetoothScanner) var bluetoothScanner
+    @Dependency(\.bleLog) var bleLog
 
     public init() {}
 
@@ -54,14 +55,16 @@ public struct DeviceDetailFeature {
                 return disconnectEffect(identifier: state.device.identifier)
 
             case let .connectionEvent(.stateChanged(status)):
+                let previous = state.connectionStatus
                 state.connectionStatus = status
+                let logEffect = connectionLogEffect(previous: previous, status: status, device: state.device)
                 if status == .connected {
-                    return discoverServicesEffect(identifier: state.device.identifier)
+                    return .merge(logEffect, discoverServicesEffect(identifier: state.device.identifier))
                 }
                 if status == .disconnected {
                     state.services = []
                 }
-                return .none
+                return logEffect
 
             case let .connectionEvent(.servicesDiscovered(services)):
                 state.services = IdentifiedArray(uniqueElements: services)
@@ -125,6 +128,31 @@ public struct DeviceDetailFeature {
                     characteristic: characteristic
                 )
             }
+        }
+    }
+
+    /// Records a critical connection-lifecycle transition (connected / disconnected / failed) to
+    /// `OSLog`. Returns `.none` for intermediate states and for no-op repeats of the same state.
+    private func connectionLogEffect(
+        previous: PeripheralConnectionState,
+        status: PeripheralConnectionState,
+        device: DiscoveredDevice
+    ) -> Effect<Action> {
+        guard previous != status else { return .none }
+        let bleLog = bleLog
+        let identifier = device.identifier
+        let name = device.name
+        switch status {
+        case .connected:
+            return .run { _ in bleLog.record(.peripheralConnected(identifier: identifier, name: name)) }
+        case .disconnected:
+            return .run { _ in bleLog.record(.peripheralDisconnected(identifier: identifier, name: name)) }
+        case let .failed(reason):
+            return .run { _ in
+                bleLog.record(.peripheralConnectionFailed(identifier: identifier, name: name, reason: reason))
+            }
+        case .connecting, .disconnecting:
+            return .none
         }
     }
 

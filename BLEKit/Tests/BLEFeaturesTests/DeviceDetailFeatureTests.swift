@@ -1,4 +1,5 @@
 import BLEKitCore
+import BLEKitDependencies
 import BLEKitHardware
 import BLEKitTestSupport
 import ComposableArchitecture
@@ -279,6 +280,62 @@ struct DeviceDetailFeatureTests {
         await store.send(.writeTapped(service: GATTFixtures.genericAccessService.identifier, characteristic: GATTFixtures.deviceNameCharacteristic.identifier)) {
             $0.writeErrorsByCharacteristic[GATTFixtures.deviceNameCharacteristic.identifier] = "Hex input may only contain 0-9 and A-F."
         }
+    }
+
+    @Test("connect / disconnect transitions are recorded as critical events on the injected log")
+    func connectionTransitionsRecordCriticalEvents() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let device = DiscoveredDeviceFixtures.plainSensor
+        let fakeConnection = FakePeripheralConnectionClient(identifier: device.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: device)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.connectTapped)
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent)
+        // A duplicate .connected event must not log a second time.
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent)
+        fakeConnection.send(.stateChanged(.disconnected))
+        await store.receive(\.connectionEvent)
+
+        fakeConnection.finish()
+        await store.finish()
+
+        #expect(recorded.value == [
+            .peripheralConnected(identifier: device.identifier, name: device.name),
+            .peripheralDisconnected(identifier: device.identifier, name: device.name),
+        ])
+    }
+
+    @Test("a failed connection is recorded as a connection-failure critical event")
+    func failedConnectionRecordsCriticalEvent() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let device = DiscoveredDeviceFixtures.plainSensor
+        let fakeConnection = FakePeripheralConnectionClient(identifier: device.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: device)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.connectTapped)
+        fakeConnection.send(.stateChanged(.failed("out of range")))
+        await store.receive(\.connectionEvent)
+
+        fakeConnection.finish()
+        await store.finish()
+
+        #expect(recorded.value == [
+            .peripheralConnectionFailed(identifier: device.identifier, name: device.name, reason: "out of range"),
+        ])
     }
 
     @Test("a failed connection is surfaced as a failed status")
