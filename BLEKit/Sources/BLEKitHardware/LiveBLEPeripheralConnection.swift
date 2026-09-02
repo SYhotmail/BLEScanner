@@ -34,6 +34,13 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
     public func connect() {
         queue.async {
             self.continuation?.yield(.stateChanged(.connecting))
+            // `connect`/`cancelPeripheralConnection` are `CBCentralManager` commands that are
+            // only valid while powered on; issuing them otherwise logs "API MISUSE". Surface a
+            // terminal state instead of leaving the UI stuck on "connecting".
+            guard self.centralManager.state == .poweredOn else {
+                self.continuation?.yield(.stateChanged(.failed("Bluetooth is not powered on")))
+                return
+            }
             self.centralManager.connect(self.peripheral, options: nil)
         }
     }
@@ -41,6 +48,10 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
     public func disconnect() {
         queue.async {
             self.continuation?.yield(.stateChanged(.disconnecting))
+            guard self.centralManager.state == .poweredOn else {
+                self.continuation?.yield(.stateChanged(.disconnected))
+                return
+            }
             self.centralManager.cancelPeripheralConnection(self.peripheral)
         }
     }

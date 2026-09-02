@@ -65,7 +65,13 @@ public final class LiveBLECentralManager: NSObject, BLECentralManaging, @uncheck
     }
 
     public func stopScanning() {
-        queue.async { self.centralManager.stopScan() }
+        queue.async {
+            // `stopScan()` is only valid while powered on. CoreBluetooth already halts scanning
+            // on its own when the radio turns off, so calling it anyway does nothing useful and
+            // logs "API MISUSE: ... can only accept this command while in the powered on state".
+            guard self.centralManager.state == .poweredOn else { return }
+            self.centralManager.stopScan()
+        }
     }
 
     public func makeConnection(for identifier: UUID) throws -> any BLEPeripheralConnection {
