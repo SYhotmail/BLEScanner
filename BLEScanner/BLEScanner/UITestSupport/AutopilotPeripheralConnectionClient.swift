@@ -48,7 +48,7 @@ final class AutopilotPeripheralConnectionClient: @unchecked Sendable {
                 }
             },
             disconnect: { [channel] in
-                channel.send(.stateChanged(.disconnected))
+                channel.send(.disconnected(reason: nil))
             },
             discoverServices: { [channel] in
                 Task {

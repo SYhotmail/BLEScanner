@@ -11,6 +11,10 @@ public struct DeviceDetailFeature {
         public var id: UUID { device.identifier }
         public var device: DiscoveredDevice
         public var connectionStatus: PeripheralConnectionState = .disconnected
+        /// Why the last connection ended, when it wasn't the app's own doing — a `CBError`-derived
+        /// string for an unexpected drop (out of range, supervision timeout, …). `nil` after a
+        /// clean/app-initiated disconnect or while connected. Drives the "Reconnect" affordance.
+        public var disconnectReason: String?
         public var services: IdentifiedArrayOf<GATTService> = []
         public var writeFormatsByCharacteristic: [GATTIdentifier: WriteFormat] = [:]
         public var writeInputsByCharacteristic: [GATTIdentifier: String] = [:]
@@ -47,6 +51,7 @@ public struct DeviceDetailFeature {
             switch action {
             case .connectTapped:
                 state.connectionStatus = .connecting
+                state.disconnectReason = nil
                 return connectEffect(identifier: state.device.identifier)
                     .cancellable(id: CancelID.connection, cancelInFlight: true)
 
@@ -65,6 +70,18 @@ public struct DeviceDetailFeature {
                     state.services = []
                 }
                 return logEffect
+
+            case let .connectionEvent(.disconnected(reason)):
+                guard state.connectionStatus != .disconnected else { return .none }
+                state.connectionStatus = .disconnected
+                state.services = []
+                state.disconnectReason = reason
+                let bleLog = bleLog
+                let identifier = state.device.identifier
+                let name = state.device.name
+                return .run { _ in
+                    bleLog.record(.peripheralDisconnected(identifier: identifier, name: name, reason: reason))
+                }
 
             case let .connectionEvent(.servicesDiscovered(services)):
                 state.services = IdentifiedArray(uniqueElements: services)
@@ -147,8 +164,9 @@ public struct DeviceDetailFeature {
         }
     }
 
-    /// Records a critical connection-lifecycle transition (connected / disconnected / failed) to
-    /// `OSLog`. Returns `.none` for intermediate states and for no-op repeats of the same state.
+    /// Records a `.stateChanged` connection transition (connected / failed) to `OSLog`. Returns
+    /// `.none` for intermediate states and for no-op repeats of the same state. Disconnects
+    /// arrive as their own `.disconnected(reason:)` event and are logged there.
     private func connectionLogEffect(
         previous: PeripheralConnectionState,
         status: PeripheralConnectionState,
@@ -161,13 +179,11 @@ public struct DeviceDetailFeature {
         switch status {
         case .connected:
             return .run { _ in bleLog.record(.peripheralConnected(identifier: identifier, name: name)) }
-        case .disconnected:
-            return .run { _ in bleLog.record(.peripheralDisconnected(identifier: identifier, name: name)) }
         case let .failed(reason):
             return .run { _ in
                 bleLog.record(.peripheralConnectionFailed(identifier: identifier, name: name, reason: reason))
             }
-        case .connecting, .disconnecting:
+        case .disconnected, .connecting, .disconnecting:
             return .none
         }
     }

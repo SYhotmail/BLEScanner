@@ -98,7 +98,7 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
 
         if !isOn {
             for connection in connections.values {
-                connection.handleDidDisconnect(error: nil)
+                connection.handleDidDisconnect(reason: "Bluetooth is unavailable")
             }
             connections.removeAll()
             discoveredPeripherals.removeAll()
@@ -161,7 +161,7 @@ extension LiveBLECentralManager: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        connectionForPeripheral(peripheral)?.handleDidDisconnect(error: error)
+        connectionForPeripheral(peripheral)?.handleDidDisconnect(reason: error?.localizedDescription)
         removePeripheral(peripheral)
     }
 }

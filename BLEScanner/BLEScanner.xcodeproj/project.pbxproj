@@ -3,18 +3,18 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		000EB774B4AB0027F9637B27 /* BLEScannerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66930F5F95C259B650586B18 /* BLEScannerUITests.swift */; };
 		0344D4A162A6511FC6E9F61E /* AddKnownBeaconSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC28CE4A255012CFF1DBED0B /* AddKnownBeaconSheet.swift */; };
 		0C41B71D7276317F141DF246 /* Color+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4158532FA410C9D528ABB41 /* Color+Device.swift */; };
+		21DEA18A304823E2005CEA12 /* Test.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282FF7CDC9323A52B4D65EF5 /* Test.swift */; };
 		25D0DFC41DA7C407E1AE2464 /* HistoryCSVDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E46AD9B9E7AE80DD0EB936 /* HistoryCSVDocument.swift */; };
 		270A79C1D8E4CC111B800CD6 /* AutopilotPeripheralConnectionClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7EAA734CE9F69D33CC3C86 /* AutopilotPeripheralConnectionClient.swift */; };
 		294C23BA700375AF92DB7084 /* SearchableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209F64A4C50D1AB467BDE79E /* SearchableList.swift */; };
 		298DD1CBCF0DC76F6A957700 /* FilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756C7251F42B2BD8B16E5F15 /* FilterView.swift */; };
-		315CACF862CDC542FE03EEB5 /* Test.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282FF7CDC9323A52B4D65EF5 /* Test.swift */; };
 		3266BC98FBBB254132F3B912 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E477E6C43FEEF96F739460 /* ScannerView.swift */; };
 		374134A89FD37E46D3C54C85 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1276CD743854A7864F4757 /* RootView.swift */; };
 		4E186B7B0930A82E9EE1AAA3 /* BLEKitCore in Frameworks */ = {isa = PBXBuildFile; productRef = C08A863C70595F136A380C2D /* BLEKitCore */; };
@@ -315,7 +315,6 @@
 			packageReferences = (
 				FDC2DE9261E07960225C080B /* XCLocalSwiftPackageReference "../BLEKit" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -369,10 +368,10 @@
 				D6459179001A05755A086331 /* ScanPeriodSheet.swift in Sources */,
 				C3FFAFDDC967ED2CC1F18890 /* ScannerListView.swift in Sources */,
 				9E5E485165A7943EE19F4629 /* ScannerRadarView.swift in Sources */,
+				21DEA18A304823E2005CEA12 /* Test.swift in Sources */,
 				3266BC98FBBB254132F3B912 /* ScannerView.swift in Sources */,
 				294C23BA700375AF92DB7084 /* SearchableList.swift in Sources */,
 				B0E8E1DC4DE1F016048D78B9 /* SettingsView.swift in Sources */,
-				315CACF862CDC542FE03EEB5 /* Test.swift in Sources */,
 				A4FDA11F36C46AB3A884BDE6 /* ToastModifier.swift in Sources */,
 				E329D486D40F3E2BC56F65A5 /* UITestFixtures.swift in Sources */,
 				9C34C8F3BA9E5BDDB48C6F58 /* View+Ext.swift in Sources */,

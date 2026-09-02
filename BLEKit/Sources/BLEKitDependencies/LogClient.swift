@@ -14,7 +14,9 @@ public enum BLELogEvent: Equatable, Sendable {
     case scanningStopped
     case deviceSelected(identifier: UUID, name: String?)
     case peripheralConnected(identifier: UUID, name: String?)
-    case peripheralDisconnected(identifier: UUID, name: String?)
+    /// `reason` is `nil` for an app-initiated disconnect and a `CBError`-derived string when the
+    /// link dropped unexpectedly (the latter logs at `.error`).
+    case peripheralDisconnected(identifier: UUID, name: String?, reason: String?)
 
     // MARK: Errors
     case bluetoothStateChanged(BluetoothState)
@@ -33,7 +35,10 @@ public enum BLELogEvent: Equatable, Sendable {
             return "Selected device \(Self.describe(identifier, name))"
         case let .peripheralConnected(identifier, name):
             return "Connected to peripheral \(Self.describe(identifier, name))"
-        case let .peripheralDisconnected(identifier, name):
+        case let .peripheralDisconnected(identifier, name, reason):
+            if let reason {
+                return "Unexpectedly disconnected from peripheral \(Self.describe(identifier, name)): \(reason)"
+            }
             return "Disconnected from peripheral \(Self.describe(identifier, name))"
         case let .bluetoothStateChanged(state):
             return "Bluetooth state changed to \(String(describing: state))"
@@ -52,6 +57,8 @@ public enum BLELogEvent: Equatable, Sendable {
         switch self {
         case .peripheralConnectionFailed, .peripheralOperationFailed, .characteristicWriteRejected:
             return .error
+        case let .peripheralDisconnected(_, _, reason):
+            return reason == nil ? .default : .error
         case let .bluetoothStateChanged(state):
             switch state {
             case .poweredOn, .unknown, .resetting:
@@ -59,8 +66,7 @@ public enum BLELogEvent: Equatable, Sendable {
             case .unsupported, .unauthorized, .poweredOff:
                 return .error
             }
-        case .scanningStarted, .scanningStopped, .deviceSelected,
-             .peripheralConnected, .peripheralDisconnected:
+        case .scanningStarted, .scanningStopped, .deviceSelected, .peripheralConnected:
             return .default
         }
     }

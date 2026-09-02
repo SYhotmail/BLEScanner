@@ -64,7 +64,7 @@ struct DeviceDetailFeatureTests {
             $0.connectionStatus = .disconnecting
         }
 
-        fakeConnection.send(.stateChanged(.disconnected))
+        fakeConnection.send(.disconnected(reason: nil))
         await store.receive(\.connectionEvent) {
             $0.connectionStatus = .disconnected
             $0.services = []
@@ -72,6 +72,50 @@ struct DeviceDetailFeatureTests {
 
         fakeConnection.finish()
         await store.finish()
+    }
+
+    @Test("an unexpected disconnect keeps its reason and surfaces a reconnect affordance")
+    func unexpectedDisconnectRetainsReason() async {
+        let recorded = LockIsolated<[BLELogEvent]>([])
+        let device = DiscoveredDeviceFixtures.plainSensor
+        let fakeConnection = FakePeripheralConnectionClient(identifier: device.identifier)
+        let store = TestStore(initialState: DeviceDetailFeature.State(device: device)) {
+            DeviceDetailFeature()
+        } withDependencies: {
+            $0.bluetoothScanner.makeConnection = { _ in fakeConnection.client }
+            $0.bleLog = LogClient { event in recorded.withValue { $0.append(event) } }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.connectTapped)
+        fakeConnection.send(.stateChanged(.connected))
+        await store.receive(\.connectionEvent)
+        fakeConnection.send(.servicesDiscovered(GATTFixtures.allServices))
+        await store.receive(\.connectionEvent)
+
+        fakeConnection.send(.disconnected(reason: "The specified device has disconnected from us."))
+        await store.receive(\.connectionEvent) {
+            $0.connectionStatus = .disconnected
+            $0.services = []
+            $0.disconnectReason = "The specified device has disconnected from us."
+        }
+
+        // Reconnecting clears the stale reason.
+        await store.send(.connectTapped) {
+            $0.connectionStatus = .connecting
+            $0.disconnectReason = nil
+        }
+
+        fakeConnection.finish()
+        await store.finish()
+
+        #expect(recorded.value.contains(
+            .peripheralDisconnected(
+                identifier: device.identifier,
+                name: device.name,
+                reason: "The specified device has disconnected from us."
+            )
+        ))
     }
 
     @Test("a characteristic value update is merged into its owning service")
@@ -301,7 +345,7 @@ struct DeviceDetailFeatureTests {
         // A duplicate .connected event must not log a second time.
         fakeConnection.send(.stateChanged(.connected))
         await store.receive(\.connectionEvent)
-        fakeConnection.send(.stateChanged(.disconnected))
+        fakeConnection.send(.disconnected(reason: nil))
         await store.receive(\.connectionEvent)
 
         fakeConnection.finish()
@@ -309,7 +353,7 @@ struct DeviceDetailFeatureTests {
 
         #expect(recorded.value == [
             .peripheralConnected(identifier: device.identifier, name: device.name),
-            .peripheralDisconnected(identifier: device.identifier, name: device.name),
+            .peripheralDisconnected(identifier: device.identifier, name: device.name, reason: nil),
         ])
     }
 

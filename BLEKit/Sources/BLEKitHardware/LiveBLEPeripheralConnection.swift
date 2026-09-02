@@ -49,7 +49,7 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
         queue.async {
             self.continuation?.yield(.stateChanged(.disconnecting))
             guard self.centralManager.state == .poweredOn else {
-                self.continuation?.yield(.stateChanged(.disconnected))
+                self.continuation?.yield(.disconnected(reason: nil))
                 return
             }
             self.centralManager.cancelPeripheralConnection(self.peripheral)
@@ -130,8 +130,8 @@ public final class LiveBLEPeripheralConnection: NSObject, BLEPeripheralConnectio
         continuation?.yield(.stateChanged(.failed(error?.localizedDescription ?? "Failed to connect")))
     }
 
-    func handleDidDisconnect(error: Error?) {
-        continuation?.yield(.stateChanged(.disconnected))
+    func handleDidDisconnect(reason: String?) {
+        continuation?.yield(.disconnected(reason: reason))
     }
 
     private func characteristic(

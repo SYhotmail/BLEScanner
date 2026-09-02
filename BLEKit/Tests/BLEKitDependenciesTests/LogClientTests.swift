@@ -19,8 +19,12 @@ struct LogClientTests {
                 == "Connected to peripheral Sensor (E2C56DB5-DFFB-48D2-B060-D0F5A71096E0)"
         )
         #expect(
-            BLELogEvent.peripheralDisconnected(identifier: identifier, name: nil).message
+            BLELogEvent.peripheralDisconnected(identifier: identifier, name: nil, reason: nil).message
                 == "Disconnected from peripheral E2C56DB5-DFFB-48D2-B060-D0F5A71096E0"
+        )
+        #expect(
+            BLELogEvent.peripheralDisconnected(identifier: identifier, name: "Sensor", reason: "out of range").message
+                == "Unexpectedly disconnected from peripheral Sensor (E2C56DB5-DFFB-48D2-B060-D0F5A71096E0): out of range"
         )
         #expect(
             BLELogEvent.peripheralConnectionFailed(identifier: identifier, name: "", reason: "timed out").message
@@ -51,11 +55,13 @@ struct LogClientTests {
         #expect(BLELogEvent.characteristicWriteRejected(characteristic: "2A00", reason: "x").level == .error)
         #expect(BLELogEvent.bluetoothStateChanged(.poweredOff).level == .error)
         #expect(BLELogEvent.bluetoothStateChanged(.unauthorized).level == .error)
+        #expect(BLELogEvent.peripheralDisconnected(identifier: UUID(), name: nil, reason: "dropped").level == .error)
 
         #expect(BLELogEvent.bluetoothStateChanged(.poweredOn).level == .default)
         #expect(BLELogEvent.scanningStarted(mode: .manual).level == .default)
         #expect(BLELogEvent.deviceSelected(identifier: UUID(), name: nil).level == .default)
         #expect(BLELogEvent.peripheralConnected(identifier: UUID(), name: nil).level == .default)
+        #expect(BLELogEvent.peripheralDisconnected(identifier: UUID(), name: nil, reason: nil).level == .default)
     }
 
     @Test("the disabled client writes to OSLog.disabled and never traps")
@@ -65,6 +71,8 @@ struct LogClientTests {
         client.record(.scanningStopped)
         client.record(.deviceSelected(identifier: UUID(), name: "x"))
         client.record(.bluetoothStateChanged(.unsupported))
+        client.record(.peripheralDisconnected(identifier: UUID(), name: "x", reason: nil))
+        client.record(.peripheralDisconnected(identifier: UUID(), name: "x", reason: "y"))
         client.record(.peripheralConnectionFailed(identifier: UUID(), name: "x", reason: "y"))
         client.record(.peripheralOperationFailed(identifier: UUID(), name: "x", reason: "y"))
         client.record(.characteristicWriteRejected(characteristic: "2A00", reason: "y"))

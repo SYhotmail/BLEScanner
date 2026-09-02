@@ -11,6 +11,11 @@ public enum PeripheralConnectionState: Sendable, Equatable {
 
 public enum PeripheralConnectionEvent: Sendable, Equatable {
     case stateChanged(PeripheralConnectionState)
+    /// The peripheral link dropped. `reason` is `nil` for an app-initiated disconnect
+    /// (`disconnect()`, or Bluetooth turning off) and a human-readable string — derived from the
+    /// `CBError` CoreBluetooth reports — when the disconnect was unexpected (out of range,
+    /// supervision timeout, peripheral-initiated, …).
+    case disconnected(reason: String?)
     case servicesDiscovered([GATTService])
     case characteristicUpdated(serviceIdentifier: GATTIdentifier, characteristic: GATTCharacteristic)
     case writeCompleted(serviceIdentifier: GATTIdentifier, characteristicIdentifier: GATTIdentifier)

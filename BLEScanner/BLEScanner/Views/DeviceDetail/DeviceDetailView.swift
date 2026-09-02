@@ -101,7 +101,8 @@ struct DeviceDetailView: View {
 
     private var statusDescription: String {
         switch store.connectionStatus {
-        case .disconnected: "Disconnected"
+        case .disconnected:
+            if let reason = store.disconnectReason { "Disconnected: \(reason)" } else { "Disconnected" }
         case .connecting: "Connecting…"
         case .connected: "Connected"
         case .disconnecting: "Disconnecting…"
@@ -110,6 +111,8 @@ struct DeviceDetailView: View {
     }
 
     private var connectButtonTitle: String {
-        isConnectedOrConnecting ? "Disconnect" : "Connect"
+        if isConnectedOrConnecting { return "Disconnect" }
+        // An unexpected drop leaves a reason behind; offer to re-establish the same connection.
+        return store.disconnectReason == nil ? "Connect" : "Reconnect"
     }
 }
